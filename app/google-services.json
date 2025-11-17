@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "776529544744",
+    "project_id": "easycart-83e4c",
+    "storage_bucket": "easycart-83e4c.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:776529544744:android:c2a83ff3411e0000c1971d",
+        "android_client_info": {
+          "package_name": "com.example.easycart"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBQ3wO7FWpfY8dvMGrzrklIIAs6Q3QxtgI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
