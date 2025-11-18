@@ -1,6 +1,7 @@
 package com.example.easycart.data.model
 
 import com.google.firebase.Timestamp
+import com.google.firebase.firestore.DocumentId
 
 data class UserProfile(
     val uid: String = "",
@@ -11,7 +12,9 @@ data class UserProfile(
 )
 
 data class Product(
-    val id: String = "",
+    // ⭐ 2. CORRECCIÓN: Usa @DocumentId para que Firestore inyecte el ID aquí.
+    @DocumentId
+    val id: String? = null,
     val name: String = "",
     val barcode: String = "",
     val price: Double = 0.0,
@@ -19,8 +22,11 @@ data class Product(
     val imageUrl: String = "",
     val category: String = "",
     val isHealthy: Boolean = true,
-    val healthLabel: String = "", // Saludable / Moderado / No saludable
-    val expiresAt: Timestamp? = null
+    val healthLabel: String = "",
+    val expiresAt: Timestamp? = null,
+    val description: String? = null,
+    val hasOffer: Boolean = false,
+    val offerPrice: Double? = null
 )
 
 data class CartItem(
@@ -30,9 +36,10 @@ data class CartItem(
     val barcode: String = "",
     val quantity: Int = 1,
     val unitPrice: Double = 0.0,
+    val maxStock: Int = 0,
     val expiresAt: Timestamp? = null
 ) {
-    val totalPrice: Double get() = unitPrice * quantity
+    val totalPrice: Double get() = quantity * unitPrice
 }
 
 data class Offer(
@@ -45,11 +52,16 @@ data class Offer(
     val imageUrl: String = ""
 )
 
-/** Estado de sensores del carrito (para Arduino) */
 data class CartStatus(
     val ledOn: Boolean = false,
     val irTriggered: Boolean = false,
     val barrierTriggered: Boolean = false,
     val weightKg: Double = 0.0,
     val lastUpdate: Timestamp = Timestamp.now()
+)
+
+data class Purchase(
+    val total: Double = 0.0,
+    val items: List<Map<String, Any>> = emptyList(),
+    val timestamp: Long = 0
 )

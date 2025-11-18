@@ -18,13 +18,28 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.rememberAsyncImagePainter
 import com.example.easycart.viewmodel.MainViewModel
 import com.example.easycart.R
+import com.example.easycart.data.model.Product
+import com.example.easycart.di.AppModule // ⭐ IMPORTADO
+import com.example.easycart.viewmodel.MainViewModelFactory // ⭐ IMPORTADO
+
 
 @Composable
-fun OffersScreen(viewModel: MainViewModel) {
+fun OffersScreen(
+    // ⭐ CORRECCIÓN APLICADA: Usando Factory
+    viewModel: MainViewModel = viewModel(
+        factory = MainViewModelFactory(AppModule.repo)
+    )
+) {
     val uiState by viewModel.uiState.collectAsState()
+
+    // CAMBIO CLAVE: Filtramos los productos que tienen offerPrice
+    val productsWithOffers = remember(uiState.products) {
+        uiState.products.filter { it.offerPrice != null }
+    }
 
     Column(
         Modifier
@@ -69,23 +84,18 @@ fun OffersScreen(viewModel: MainViewModel) {
         Spacer(Modifier.height(18.dp))
 
         // -------------------------
-        // LISTA REALES DESDE FIRESTORE
+        // LISTA DE PRODUCTOS CON OFFERPRICE
         // -------------------------
         LazyColumn(verticalArrangement = Arrangement.spacedBy(16.dp)) {
 
-            items(uiState.offers) { offer ->
+            // Usamos la lista de productos filtrada
+            items(productsWithOffers) { product ->
 
-                // 🔥 Buscar el producto real
-                val product = uiState.products.find { it.id == offer.productId }
-
-                OfferCard(
-                    offer = offer,
-                    productName = product?.name ?: "Producto desconocido",
-                    productPrice = product?.price,
-                    productBarcode = product?.barcode,
-                    productImage = product?.imageUrl,
+                OfferCardProduct(
+                    product = product,
                     onAddClick = {
-                        product?.barcode?.let {
+                        // Asegúrate de que el ViewModel procese el escaneo correctamente
+                        product.barcode.let {
                             viewModel.onBarcodeScanned(it)
                         }
                     }
@@ -96,37 +106,30 @@ fun OffersScreen(viewModel: MainViewModel) {
 }
 
 /* ===========================================================
-   🃏 TARJETA PROFESIONAL POR CADA OFERTA
+   🃏 TARJETA OPTIMIZADA PARA PRODUCTOS CON OFFERPRICE
 =========================================================== */
 
 @Composable
-fun OfferCard(
-    offer: com.example.easycart.data.model.Offer,
-    productName: String,
-    productPrice: Double?,
-    productBarcode: String?,
-    productImage: String?,
+fun OfferCardProduct(
+    product: Product,
     onAddClick: () -> Unit
 ) {
-
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(18.dp),
         elevation = CardDefaults.cardElevation(6.dp)
     ) {
-
         Column {
-
             // ---------------------------------------------------
             // IMAGEN REAL DEL PRODUCTO O PLACEHOLDER
             // ---------------------------------------------------
             Image(
                 painter =
-                    if (productImage != null && productImage.isNotBlank())
-                        rememberAsyncImagePainter(productImage)
+                    if (product.imageUrl != null && product.imageUrl.isNotBlank())
+                        rememberAsyncImagePainter(product.imageUrl)
                     else painterResource(R.drawable.offer_placeholder),
 
-                contentDescription = "offer image",
+                contentDescription = "product image",
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(170.dp),
@@ -136,7 +139,7 @@ fun OfferCard(
             Column(Modifier.padding(16.dp)) {
 
                 Text(
-                    offer.title,
+                    product.name,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
@@ -144,7 +147,7 @@ fun OfferCard(
                 Spacer(Modifier.height(4.dp))
 
                 Text(
-                    offer.description,
+                    product.description ?: "Precio especial por tiempo limitado.",
                     color = Color.Gray,
                     style = MaterialTheme.typography.bodyMedium
                 )
@@ -152,9 +155,8 @@ fun OfferCard(
                 Spacer(Modifier.height(14.dp))
 
                 // -------------- PRECIOS ----------------
-                val basePrice = productPrice ?: 0.0
-                val discount = basePrice * (offer.discountPercent / 100.0)
-                val finalPrice = basePrice - discount
+                val basePrice = product.price
+                val finalPrice = product.offerPrice ?: basePrice
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
 
@@ -177,17 +179,6 @@ fun OfferCard(
                     ) {
                         Text("Agregar")
                     }
-                }
-
-                Spacer(Modifier.height(12.dp))
-
-                // ------------ FECHA LIMITE ------------
-                offer.validUntil?.toDate()?.let { date ->
-                    Text(
-                        "Válido hasta: $date",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color(0xFF616161)
-                    )
                 }
             }
         }

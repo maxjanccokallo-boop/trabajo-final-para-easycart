@@ -14,6 +14,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.easycart.viewmodel.MainViewModel
+import java.util.Date // ⭐ IMPORTACIÓN NECESARIA PARA MOSTRAR LA FECHA
 
 @Composable
 fun ProfileScreen(
@@ -76,6 +77,7 @@ fun ProfileScreen(
                     Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
+                    // Nota: Se usarán las propiedades del carrito (uiState.cart) hasta que se modifiquen
                     ProfileStat("Compras", uiState.cart.size.toString())
                     ProfileStat("Productos", uiState.cart.sumOf { it.quantity }.toString())
                     ProfileStat("Gastado", "S/ ${"%.2f".format(uiState.total)}")
@@ -105,7 +107,7 @@ fun ProfileScreen(
                 Row(Modifier.fillMaxWidth()) {
                     SyncBox("Usuarios", "1", Color(0xFFF2F7F2), Modifier.weight(1f))
                     Spacer(Modifier.width(12.dp))
-                    SyncBox("Boletas", "0", Color(0xFFF0FAF2), Modifier.weight(1f))
+                    SyncBox("Boletas", uiState.purchases.size.toString(), Color(0xFFF0FAF2), Modifier.weight(1f)) // Usando purchases.size
                 }
 
                 Spacer(Modifier.height(12.dp))
@@ -124,7 +126,7 @@ fun ProfileScreen(
                 Spacer(Modifier.height(16.dp))
 
                 Button(
-                    onClick = { },
+                    onClick = { /* Lógica de sincronización */ },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(48.dp)
@@ -135,7 +137,7 @@ fun ProfileScreen(
                 Spacer(Modifier.height(12.dp))
 
                 Button(
-                    onClick = { },
+                    onClick = { /* Lógica de exportación */ },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(48.dp),
@@ -175,15 +177,15 @@ fun ProfileScreen(
 
                 Spacer(Modifier.height(12.dp))
 
-                StatRow("🛒 Total de Compras", uiState.cart.size.toString())
+                StatRow("🛒 Total de Compras", uiState.purchases.size.toString()) // Usando purchases.size
                 StatRow("📦 Productos Comprados", uiState.products.size.toString())
-                StatRow("💸 Total Gastado", "S/ ${"%.2f".format(uiState.total)}")
+                StatRow("💸 Total Gastado", "S/ ${"%.2f".format(uiState.purchases.sumOf { it.total })}") // Usando purchases.sumOf
             }
         }
 
         Spacer(Modifier.height(20.dp))
 
-        // ----------- HISTORIAL DE COMPRAS ----------
+        // ----------- HISTORIAL DE COMPRAS (MODIFICADO) ----------
         Card(
             Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(20.dp)
@@ -195,14 +197,24 @@ fun ProfileScreen(
 
                 Spacer(Modifier.height(16.dp))
 
-                Box(
-                    Modifier
-                        .fillMaxWidth()
-                        .height(120.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text("🛍  Aún no has realizado compras", color = Color.Gray)
+                // ⭐ BLOQUE REEMPLAZADO PARA MOSTRAR HISTORIAL REAL
+                if (uiState.purchases.isEmpty()) {
+                    Box(
+                        Modifier
+                            .fillMaxWidth()
+                            .height(120.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("🛍  Aún no has realizado compras", color = Color.Gray)
+                    }
+                } else {
+                    uiState.purchases.forEach { p ->
+                        Text("🧾 Compra de S/ ${"%.2f".format(p.total)}", fontWeight = FontWeight.Bold)
+                        Text("📅 Fecha: ${Date(p.timestamp)}")
+                        Spacer(Modifier.height(12.dp))
+                    }
                 }
+                // ⭐ FIN BLOQUE REEMPLAZADO
             }
         }
 

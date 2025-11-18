@@ -9,10 +9,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.navigation.NavController
+import androidx.navigation.NavController // Aunque no se usa directamente en esta función, mantenemos la importación si es necesaria en el archivo.
 
 @Composable
-fun PaymentSuccessScreen(navController: NavController) {
+fun PaymentSuccessScreen(
+    // ⭐ CAMBIO CLAVE: Acepta el lambda de acción 'onDone' en lugar del NavController
+    onDone: () -> Unit
+) {
     Column(
         Modifier
             .fillMaxSize()
@@ -36,9 +39,11 @@ fun PaymentSuccessScreen(navController: NavController) {
 
         Button(
             modifier = Modifier.fillMaxWidth(),
-            onClick = { navController.navigate("products") }
+            // ⭐ Usamos el lambda 'onDone' para ejecutar la navegación segura
+            onClick = { onDone() }
         ) {
-            Text("Volver a comprar")
+            // ⭐ Cambiamos el texto para reflejar la acción de volver a Home/Inicio
+            Text("Volver al inicio")
         }
     }
 }

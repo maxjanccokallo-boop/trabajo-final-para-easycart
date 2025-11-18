@@ -37,7 +37,7 @@ class BluetoothService(private val context: Context) {
                 adapter.cancelDiscovery()
                 bluetoothSocket!!.connect()
 
-                _connected.emit(true)
+                _connected.emit(true)   
 
                 listenForData()
 

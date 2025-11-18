@@ -16,6 +16,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.easycart.viewmodel.MainViewModel
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Remove
 
 @Composable
 fun CartScreen(
@@ -86,48 +88,80 @@ fun CartScreen(
                         elevation = CardDefaults.cardElevation(4.dp)
                     ) {
 
-                        Row(
+                        Column(
                             Modifier
                                 .fillMaxWidth()
-                                .padding(14.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                                .padding(14.dp)
                         ) {
 
-                            // FOTO
-                            Box(
-                                modifier = Modifier
-                                    .size(55.dp)
-                                    .background(Color(0xFFEDEEF0), RoundedCornerShape(12.dp))
-                            )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
 
-                            Spacer(Modifier.width(12.dp))
+                                // FOTO
+                                Box(
+                                    modifier = Modifier
+                                        .size(55.dp)
+                                        .background(Color(0xFFEDEEF0), RoundedCornerShape(12.dp))
+                                )
 
-                            Column(Modifier.weight(1f)) {
+                                Spacer(Modifier.width(12.dp))
+
+                                Column(
+                                    Modifier.weight(1f)
+                                ) {
+
+                                    Text(
+                                        item.productName,
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold
+                                    )
+
+                                    Text(
+                                        "x${item.quantity}  •  S/ ${item.unitPrice}",
+                                        color = Color.Gray
+                                    )
+
+                                    item.expiresAt?.toDate()?.let { date ->
+                                        Text(
+                                            "Vence: $date",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = Color(0xFF3A5FCD)
+                                        )
+                                    }
+                                }
 
                                 Text(
-                                    item.productName,
+                                    "S/ ${"%.2f".format(item.totalPrice)}",
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+
+                            Spacer(Modifier.height(10.dp))
+
+                            // ============================
+                            // ➕➖ CONTROLES DE CANTIDAD
+                            // ============================
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+
+                                IconButton(onClick = { viewModel.decreaseQuantity(item) }) {
+                                    Icon(Icons.Default.Remove, contentDescription = "Disminuir")
+                                }
+
+                                Text(
+                                    item.quantity.toString(),
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold
                                 )
 
-                                Text(
-                                    "x${item.quantity}  •  S/ ${item.unitPrice}",
-                                    color = Color.Gray
-                                )
-
-                                item.expiresAt?.toDate()?.let { date ->
-                                    Text(
-                                        "Vence: $date",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = Color(0xFF3A5FCD)
-                                    )
+                                IconButton(onClick = { viewModel.increaseQuantity(item) }) {
+                                    Icon(Icons.Default.Add, contentDescription = "Aumentar")
                                 }
                             }
-
-                            Text(
-                                "S/ ${"%.2f".format(item.totalPrice)}",
-                                fontWeight = FontWeight.Bold
-                            )
                         }
                     }
                 }
@@ -149,6 +183,7 @@ fun CartScreen(
             // ============================
             // BOTÓN PAGAR EN EFECTIVO
             // ============================
+
             Button(
                 onClick = {
                     navController.navigate("cash_payment")

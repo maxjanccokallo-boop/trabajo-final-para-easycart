@@ -1,7 +1,6 @@
 package com.example.easycart.ui.screens.home
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -17,13 +16,22 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.easycart.viewmodel.MainViewModel
+import com.example.easycart.di.AppModule
+import com.example.easycart.viewmodel.MainViewModelFactory
+import com.example.easycart.data.model.Product // Aseguramos la importación del modelo
 
 @Composable
-fun ProductsScreen(viewModel: MainViewModel) {
+fun ProductsScreen(
+    viewModel: MainViewModel = viewModel(
+        factory = MainViewModelFactory(AppModule.repo)
+    )
+) {
 
     val uiState by viewModel.uiState.collectAsState()
     var search by remember { mutableStateOf(TextFieldValue("")) }
+    val searchQuery = search.text.lowercase().trim() // Limpiar y estandarizar la búsqueda
 
     Column(
         Modifier
@@ -31,22 +39,20 @@ fun ProductsScreen(viewModel: MainViewModel) {
             .padding(16.dp)
     ) {
 
-        // -------------------------
-        // 🔍 Barra de búsqueda
-        // -------------------------
+        // BUSCADOR
         TextField(
             value = search,
             onValueChange = { search = it },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(55.dp),
-            placeholder = { Text("Buscar productos…") },
+            placeholder = { Text("Buscar productos por nombre o código de barras...") },
             leadingIcon = {
                 Icon(Icons.Default.Search, contentDescription = "Buscar")
             },
             shape = RoundedCornerShape(14.dp),
             colors = TextFieldDefaults.colors(
-                unfocusedContainerColor = Color(0xFFF8F9FA),
+                unfocusedContainerColor = Color(0xFFF2F3F4),
                 focusedContainerColor = Color.White,
                 unfocusedIndicatorColor = Color.Transparent,
                 focusedIndicatorColor = Color.Transparent
@@ -55,117 +61,121 @@ fun ProductsScreen(viewModel: MainViewModel) {
 
         Spacer(Modifier.height(18.dp))
 
-        // -------------------------
-        // 🛍 Lista de productos
-        // -------------------------
+        // LISTA DE PRODUCTOS
         LazyColumn(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
 
-            val filtered = uiState.products.filter {
-                it.name.lowercase().contains(search.text.lowercase())
+            // ⭐ LÓGICA DE FILTRADO MEJORADA: Busca por Nombre O por Barcode
+            val filtered = if (searchQuery.isBlank()) {
+                uiState.products
+            } else {
+                uiState.products.filter { p ->
+                    // 1. Buscar por Nombre (contiene)
+                    val matchesName = p.name.lowercase().contains(searchQuery)
+
+                    // 2. Buscar por Código de Barras (exacto o contiene, si no es nulo)
+                    val matchesBarcode = p.barcode?.contains(searchQuery) ?: false
+
+                    matchesName || matchesBarcode
+                }
             }
 
             items(filtered) { p ->
+                ProductItemCard(p, viewModel)
+            }
+        }
+    }
+}
 
-                Card(
-                    Modifier
-                        .fillMaxWidth(),
-                    shape = RoundedCornerShape(18.dp),
-                    elevation = CardDefaults.cardElevation(4.dp)
-                ) {
-                    Row(
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
+// ⭐ Nuevo Composable para organizar el código de la tarjeta del producto
+@Composable
+fun ProductItemCard(p: Product, viewModel: MainViewModel) {
+    Card(
+        Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.cardElevation(4.dp)
+    ) {
 
-                        // -------- Información del producto --------
-                        Column(
-                            Modifier.weight(1f)
-                        ) {
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
 
-                            Text(
-                                p.name,
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold
-                            )
+            Column(Modifier.weight(1f)) {
 
-                            Text(
-                                "Código: ${p.barcode}",
-                                color = Color.Gray,
-                                style = MaterialTheme.typography.bodySmall
-                            )
+                Text(
+                    p.name,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
 
-                            Text(
-                                "S/ ${p.price}",
-                                style = MaterialTheme.typography.titleMedium,
-                                color = Color(0xFF1E88E5),
-                                fontWeight = FontWeight.Bold
-                            )
+                Text(
+                    "Código: ${p.barcode ?: "N/A"}",
+                    color = Color.Gray,
+                    style = MaterialTheme.typography.bodySmall
+                )
 
-                            Spacer(Modifier.height(4.dp))
+                Text(
+                    "S/ ${p.price}",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF1E88E5)
+                )
 
-                            // --- Badges de estado ---
-                            Row {
-                                BadgeBox("Stock ${p.stock}", Color(0xFF4CAF50))
-                                Spacer(Modifier.width(6.dp))
+                Spacer(Modifier.height(6.dp))
 
-                                if (p.healthLabel.isNotBlank()) {
-                                    HealthBadge(p.healthLabel)
-                                }
-                            }
-                        }
-
-                        // -------- Botón de AGREGAR --------
-                        Button(
-                            onClick = {
-                                // Simula escaneo REAL → agrega al carrito
-                                viewModel.onBarcodeScanned(p.barcode)
-                            },
-                            shape = RoundedCornerShape(14.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = Color(0xFF1E88E5)
-                            )
-                        ) {
-                            Icon(Icons.Default.Add, contentDescription = null)
-                            Spacer(Modifier.width(4.dp))
-                            Text("Agregar")
-                        }
+                Row {
+                    BadgeBox("Stock ${p.stock}", Color(0xFF4CAF50))
+                    Spacer(Modifier.width(6.dp))
+                    if (p.healthLabel.isNotBlank()) {
+                        HealthBadge(p.healthLabel)
                     }
                 }
+            }
+
+            Button(
+                // ⭐ AL PRESIONAR AGREGAR: Usa el código de barras (barcode) para el escaneo/añadido
+                onClick = {
+                    val barcode = p.barcode
+                    if (barcode != null) {
+                        viewModel.onBarcodeScanned(barcode)
+                    }
+                    // Si el barcode es nulo, se podría mostrar un mensaje de error o usar el product.id
+                },
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFF1E88E5)
+                ),
+                shape = RoundedCornerShape(14.dp)
+            ) {
+                Icon(Icons.Default.Add, contentDescription = null)
+                Spacer(Modifier.width(6.dp))
+                Text("Agregar")
             }
         }
     }
 }
 
 
-// -------------------------
-// 🎨 Badge Stock
-// -------------------------
 @Composable
 fun BadgeBox(text: String, color: Color) {
     Box(
-        modifier = Modifier
-            .background(color.copy(alpha = 0.12f), RoundedCornerShape(10.dp))
+        Modifier
+            .background(color.copy(alpha = 0.15f), RoundedCornerShape(12.dp))
             .padding(horizontal = 10.dp, vertical = 5.dp)
     ) {
         Text(text, color = color, fontWeight = FontWeight.SemiBold)
     }
 }
 
-// -------------------------
-// ❤️ Badge saludable / moderado / no saludable
-// -------------------------
 @Composable
 fun HealthBadge(label: String) {
-
     val color = when (label.lowercase()) {
         "saludable" -> Color(0xFF4CAF50)
         "moderado" -> Color(0xFFFFC107)
         else -> Color(0xFFE53935)
     }
-
     BadgeBox(label, color)
 }

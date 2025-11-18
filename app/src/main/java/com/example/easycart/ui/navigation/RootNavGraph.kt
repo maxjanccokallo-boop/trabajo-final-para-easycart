@@ -19,6 +19,9 @@ fun RootNavGraph(
     mainViewModel: MainViewModel
 ) {
 
+    // ⭐ Ya no necesitamos CART_ROUTE aquí ya que la navegación es interna del HomeScreen
+    // val CART_ROUTE = "cart_tab"
+
     NavHost(
         navController = navController,
         startDestination = if (mainViewModel.uiState.value.user == null)
@@ -26,7 +29,7 @@ fun RootNavGraph(
     ) {
 
         // -------------------------
-        // LOGIN
+        // LOGIN / REGISTER / PAYMENT SCREENS (Sin cambios)
         // -------------------------
         composable(Screen.Login.route) {
             LoginScreen(
@@ -39,10 +42,6 @@ fun RootNavGraph(
                 onGoToRegister = { navController.navigate(Screen.Register.route) }
             )
         }
-
-        // -------------------------
-        // REGISTER
-        // -------------------------
         composable(Screen.Register.route) {
             RegisterScreen(
                 viewModel = authViewModel,
@@ -54,30 +53,30 @@ fun RootNavGraph(
                 onBackToLogin = { navController.popBackStack() }
             )
         }
-
-        // -------------------------
-        // PAGO EN EFECTIVO
-        // -------------------------
         composable("cash_payment") {
             CashPaymentScreen(navController, mainViewModel)
         }
-
         composable("payment_success") {
-            PaymentSuccessScreen(navController)
+            PaymentSuccessScreen(
+                onDone = {
+                    navController.popBackStack(Screen.Home.route, false)
+                }
+            )
         }
 
         // -------------------------
-        // HOME SCREEN
+        // HOME SCREEN (CONTENEDOR DE TABS)
         // -------------------------
         composable(Screen.Home.route) {
             HomeScreen(
-                navController = navController,   // 👈 AHORA SÍ LO ENVIAMOS
+                navController = navController,
                 viewModel = mainViewModel,
                 onLogout = {
                     navController.navigate(Screen.Login.route) {
                         popUpTo(Screen.Home.route) { inclusive = true }
                     }
                 }
+                // ⭐ SE ELIMINA EL PARÁMETRO onNavigateToCartTab
             )
         }
     }

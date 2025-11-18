@@ -22,9 +22,10 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         // 1. Inicializar Firebase y Repositorio
+        // ⭐ AJUSTE: Pasamos Auth y luego Firestore, coincidiendo con el Repositorio.
         val repo = EasyCartRepository(
-            Firebase.auth,        // ← YA RECONOCIDO
-            Firebase.firestore    // ← YA RECONOCIDO
+            auth = Firebase.auth,
+            db = Firebase.firestore
         )
 
         // 2. ViewModels

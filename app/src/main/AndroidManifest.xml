@@ -2,10 +2,14 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- ====== PERMISOS DE INTERNET ====== -->
     <uses-permission android:name="android.permission.INTERNET" />
 
-    <!-- ====== PERMISOS BLUETOOTH (Android 12+) ====== -->
+    <uses-permission android:name="android.permission.BLUETOOTH" tools:ignore="Deprecated" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" tools:ignore="Deprecated" />
+
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" tools:ignore="CoarseFineLocation" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+
     <uses-permission
         android:name="android.permission.BLUETOOTH_CONNECT"
         android:usesPermissionFlags="neverForLocation"
@@ -16,14 +20,8 @@
         android:usesPermissionFlags="neverForLocation"
         tools:targetApi="s" />
 
-    <uses-permission android:name="android.permission.BLUETOOTH" tools:ignore="Deprecated" />
-    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" tools:ignore="Deprecated" />
+    <uses-feature android:name="android.hardware.usb.host" />
 
-    <!-- Necesarios para descubrir dispositivos Bluetooth -->
-    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
-    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
-
-    <!-- Permitir mostrar diálogos de bluetooth -->
     <uses-feature android:name="android.hardware.bluetooth" android:required="false" />
     <uses-feature android:name="android.hardware.bluetooth_le" android:required="false"/>
 
@@ -47,6 +45,15 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+
+            <intent-filter>
+                <action android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED" />
+            </intent-filter>
+
+            <meta-data
+                android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED"
+                android:resource="@xml/device_filter" />
+
         </activity>
 
     </application>

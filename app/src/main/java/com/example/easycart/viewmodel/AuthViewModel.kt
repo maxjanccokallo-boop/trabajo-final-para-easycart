@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.easycart.data.EasyCartRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 data class AuthUiState(
@@ -17,23 +18,25 @@ class AuthViewModel(
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AuthUiState())
-    val uiState: StateFlow<AuthUiState> = _uiState
+    val uiState: StateFlow<AuthUiState> = _uiState.asStateFlow()
 
     fun login(email: String, password: String, onSuccess: () -> Unit) {
         viewModelScope.launch {
             _uiState.value = AuthUiState(isLoading = true)
             val result = repo.login(email, password)
+
             _uiState.value = if (result.isSuccess) {
                 onSuccess()
                 AuthUiState()
             } else {
-                AuthUiState(error = result.exceptionOrNull()?.message ?: "Error de inicio de sesión")
+                AuthUiState(error = result.exceptionOrNull?.invoke()?.message ?: "Error de inicio de sesión")
             }
         }
     }
 
+    // ⭐ CORRECCIÓN CRÍTICA: Se actualiza la firma de 'register' para aceptar todos los campos
     fun register(
-        name: String,
+        fullName: String,
         email: String,
         password: String,
         phone: String,
@@ -41,12 +44,15 @@ class AuthViewModel(
     ) {
         viewModelScope.launch {
             _uiState.value = AuthUiState(isLoading = true)
-            val result = repo.register(name, email, password, phone)
+
+            // Llama a la nueva función del repositorio
+            val result = repo.register(fullName, email, password, phone)
+
             _uiState.value = if (result.isSuccess) {
                 onSuccess()
                 AuthUiState()
             } else {
-                AuthUiState(error = result.exceptionOrNull()?.message ?: "Error de registro")
+                AuthUiState(error = result.exceptionOrNull?.invoke()?.message ?: "Error de registro")
             }
         }
     }
