@@ -11,6 +11,7 @@ import com.example.easycart.ui.screens.auth.RegisterScreen
 import com.example.easycart.ui.screens.home.HomeScreen
 import com.example.easycart.ui.screens.home.CashPaymentScreen
 import com.example.easycart.ui.screens.home.PaymentSuccessScreen
+import com.example.easycart.ui.screens.home.PaymentScreen
 
 @Composable
 fun RootNavGraph(
@@ -60,6 +61,9 @@ fun RootNavGraph(
                     navController.popBackStack(Screen.Home.route, false)
                 }
             )
+        }
+        composable("payment") {
+            PaymentScreen(navController, mainViewModel)
         }
 
         // -------------------------

@@ -8,11 +8,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.CenterFocusWeak
-import androidx.compose.material.icons.filled.Inventory2
-import androidx.compose.material.icons.filled.Remove
-import androidx.compose.material.icons.filled.ShoppingBag
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -23,11 +19,14 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import com.example.easycart.data.model.CartItem
+import com.example.easycart.ui.navigation.BottomTab
+import com.example.easycart.ui.navigation.Screen
 import com.example.easycart.viewmodel.MainViewModel
 
 // ================================
@@ -46,7 +45,7 @@ private val GreenButtonGradient = Brush.horizontalGradient(
 )
 
 // ================================
-// ⭐ CART SCREEN
+// ⭐ CART SCREEN PRO
 // ================================
 @Composable
 fun CartScreen(
@@ -66,7 +65,7 @@ fun CartScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = horizontalPad, vertical = 12.dp)
+                .padding(horizontal = horizontalPad, vertical = 10.dp)
         ) {
 
             // ============================
@@ -74,11 +73,40 @@ fun CartScreen(
             // ============================
             if (uiState.cart.isEmpty()) {
                 EmptyCartState(
-                    onScanClick = { navController.navigate("scan") },
-                    onCatalogClick = { navController.navigate("products") }
+                    onScanClick = {
+                        // ir a tab Escanear sin usar ruta inexistente
+                        navController.currentBackStackEntry
+                            ?.savedStateHandle?.set("targetTab", BottomTab.Scan.name)
+
+                        navController.navigate(Screen.Home.route) { launchSingleTop = true }
+                    },
+                    onCatalogClick = {
+                        // ir a tab Productos sin usar "products"
+                        navController.currentBackStackEntry
+                            ?.savedStateHandle?.set("targetTab", BottomTab.Products.name)
+
+                        navController.navigate(Screen.Home.route) { launchSingleTop = true }
+                    }
                 )
                 return@Column
             }
+
+            // ============================
+            // 🧾 TÍTULO + SUBTÍTULO
+            // ============================
+            Text(
+                text = "Mi Carrito",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Black,
+                color = Color(0xFF111827)
+            )
+            Text(
+                text = "${uiState.cart.size} productos",
+                style = MaterialTheme.typography.bodySmall,
+                color = Color.Gray
+            )
+
+            Spacer(Modifier.height(10.dp))
 
             // ============================
             // 🧾 LISTA DEL CARRITO
@@ -87,21 +115,15 @@ fun CartScreen(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
-                contentPadding = PaddingValues(bottom = 10.dp)
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                contentPadding = PaddingValues(bottom = 12.dp)
             ) {
                 items(uiState.cart, key = { it.productId }) { item ->
-                    CartItemCard(
-                        name = item.productName,
-                        price = item.unitPrice,
-                        offerPrice = item.offerPrice,
-                        hasOffer = item.hasOffer,
-                        discountPercent = item.discountPercent,
-                        quantity = item.quantity,
-                        expiresText = item.expiresAt?.toDate()?.toString(),
-                        totalItem = item.totalPrice,
+                    CartItemCardPro(
+                        item = item,
                         onMinus = { viewModel.decreaseQuantity(item) },
-                        onPlus = { viewModel.increaseQuantity(item) }
+                        onPlus = { viewModel.increaseQuantity(item) },
+                        onDelete = { viewModel.removeItem(item) }
                     )
                 }
             }
@@ -109,9 +131,10 @@ fun CartScreen(
             // ============================
             // 💰 RESUMEN / TOTAL
             // ============================
-            CartSummary(
-                total = uiState.total,
-                onPayClick = { navController.navigate("cash_payment") },
+            CartSummaryPro(
+                subtotal = uiState.cart.sumOf { it.quantity * it.unitPrice },
+                total = uiState.cart.sumOf { it.totalPrice }, // YA usa descuento
+                onPayClick = { navController.navigate("payment") },
                 onClearClick = { viewModel.clearCart() }
             )
         }
@@ -119,29 +142,115 @@ fun CartScreen(
 }
 
 // =====================================================================
-// ⭐ VISTA VACIA
+// ✅ ESTADO VACÍO PRO
 // =====================================================================
 @Composable
 private fun EmptyCartState(
     onScanClick: () -> Unit,
     onCatalogClick: () -> Unit
-) { /* IGUAL QUE TU CÓDIGO, NO LO MUEVO */ }
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 10.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+
+        Box(
+            modifier = Modifier
+                .size(160.dp)
+                .clip(CircleShape)
+                .background(Color(0xFFEDEBFF)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.ShoppingBag,
+                contentDescription = "Carrito vacío",
+                tint = Color(0xFF6D5DF6),
+                modifier = Modifier.size(72.dp)
+            )
+        }
+
+        Spacer(Modifier.height(18.dp))
+
+        Text(
+            text = "Carrito Vacío",
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold,
+            color = Color(0xFF111827)
+        )
+
+        Spacer(Modifier.height(6.dp))
+
+        Text(
+            text = "¡Comienza a agregar tus productos favoritos!",
+            style = MaterialTheme.typography.bodyMedium,
+            color = Color(0xFF6B7280),
+            textAlign = TextAlign.Center
+        )
+
+        Spacer(Modifier.height(22.dp))
+
+        GradientButton(
+            text = "Escanear Producto",
+            icon = Icons.Default.CenterFocusWeak,
+            gradient = PurpleButtonGradient,
+            onClick = onScanClick
+        )
+
+        Spacer(Modifier.height(12.dp))
+
+        GradientButton(
+            text = "Ver Catálogo",
+            icon = Icons.Default.Inventory2,
+            gradient = GreenButtonGradient,
+            onClick = onCatalogClick
+        )
+    }
+}
+
+@Composable
+private fun GradientButton(
+    text: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    gradient: Brush,
+    onClick: () -> Unit
+) {
+    Button(
+        onClick = onClick,
+        modifier = Modifier
+            .fillMaxWidth(0.78f)
+            .height(54.dp)
+            .shadow(8.dp, RoundedCornerShape(16.dp)),
+        shape = RoundedCornerShape(16.dp),
+        colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
+        contentPadding = PaddingValues()
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(gradient, RoundedCornerShape(16.dp)),
+            contentAlignment = Alignment.Center
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(icon, contentDescription = null, tint = Color.White)
+                Spacer(Modifier.width(8.dp))
+                Text(text, color = Color.White, fontWeight = FontWeight.Bold)
+            }
+        }
+    }
+}
 
 // =====================================================================
-// ⭐ ITEM CARD PRO — OPCIÓN A (OFERTAS COMPLETAS)
+// ✅ ITEM CARD PRO (ofertas + eliminar)
 // =====================================================================
 @Composable
-private fun CartItemCard(
-    name: String,
-    price: Double,
-    offerPrice: Double?,
-    hasOffer: Boolean,
-    discountPercent: Int?,
-    quantity: Int,
-    expiresText: String?,
-    totalItem: Double,
+private fun CartItemCardPro(
+    item: CartItem,
     onMinus: () -> Unit,
-    onPlus: () -> Unit
+    onPlus: () -> Unit,
+    onDelete: () -> Unit
 ) {
     Card(
         modifier = Modifier
@@ -151,31 +260,34 @@ private fun CartItemCard(
         elevation = CardDefaults.cardElevation(5.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White)
     ) {
-
         Column(
             Modifier
                 .fillMaxWidth()
                 .padding(14.dp)
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
 
-                // Imagen
+            Row(verticalAlignment = Alignment.Top) {
+
+                // Imagen placeholder
                 Box(
                     modifier = Modifier
-                        .size(58.dp)
+                        .size(60.dp)
                         .clip(RoundedCornerShape(12.dp))
                         .background(Color(0xFFF1F2F4)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(Icons.Default.ShoppingBag, contentDescription = null, tint = Color(0xFF9CA3AF))
+                    Icon(
+                        Icons.Default.LocalMall,
+                        contentDescription = null,
+                        tint = Color(0xFF9CA3AF)
+                    )
                 }
 
                 Spacer(Modifier.width(12.dp))
 
                 Column(Modifier.weight(1f)) {
-
                     Text(
-                        text = name,
+                        text = item.productName,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         maxLines = 1,
@@ -184,14 +296,10 @@ private fun CartItemCard(
 
                     Spacer(Modifier.height(4.dp))
 
-                    // ========================
-                    // PRECIO NORMAL + OFERTA
-                    // ========================
-                    if (hasOffer && offerPrice != null) {
-
-                        // Precio tachado
+                    // Precio normal / oferta
+                    if (item.hasOffer && item.offerPrice != null) {
                         Text(
-                            text = "S/ ${"%.2f".format(price)}",
+                            text = "S/ ${"%.2f".format(item.unitPrice)}",
                             style = MaterialTheme.typography.bodySmall,
                             color = Color.Gray,
                             textDecoration = TextDecoration.LineThrough
@@ -199,13 +307,13 @@ private fun CartItemCard(
 
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
-                                text = "S/ ${"%.2f".format(offerPrice)}",
+                                text = "S/ ${"%.2f".format(item.offerPrice)}",
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Black,
                                 color = Color(0xFF6D5DF6)
                             )
 
-                            if (discountPercent != null) {
+                            if (item.discountPercent != null) {
                                 Spacer(Modifier.width(6.dp))
                                 Box(
                                     modifier = Modifier
@@ -214,7 +322,7 @@ private fun CartItemCard(
                                         .padding(horizontal = 6.dp, vertical = 2.dp)
                                 ) {
                                     Text(
-                                        "-${discountPercent}%",
+                                        "-${item.discountPercent}%",
                                         color = Color.White,
                                         fontWeight = FontWeight.Bold,
                                         style = MaterialTheme.typography.labelSmall
@@ -222,70 +330,94 @@ private fun CartItemCard(
                                 }
                             }
                         }
-
                     } else {
-                        // Sin oferta
                         Text(
-                            text = "S/ ${"%.2f".format(price)}",
-                            style = MaterialTheme.typography.titleMedium,
+                            text = "S/ ${"%.2f".format(item.unitPrice)}",
+                            style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Bold
                         )
                     }
 
-                    if (!expiresText.isNullOrBlank()) {
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        text = "x${item.quantity} • ${item.barcode}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.Gray
+                    )
+
+                    item.expiresAt?.toDate()?.let {
+                        Spacer(Modifier.height(2.dp))
                         Text(
-                            text = "Vence: $expiresText",
+                            text = "Vence: $it",
                             style = MaterialTheme.typography.bodySmall,
                             color = Color(0xFF4A64F0)
                         )
                     }
                 }
 
-                Text(
-                    text = "S/ ${"%.2f".format(totalItem)}",
-                    fontWeight = FontWeight.Black,
-                    color = Color(0xFF111827)
-                )
+                Column(horizontalAlignment = Alignment.End) {
+                    IconButton(onClick = { /* favorito si quieres */ }) {
+                        Icon(Icons.Default.FavoriteBorder, contentDescription = null)
+                    }
+                    Text(
+                        text = "S/ ${"%.2f".format(item.totalPrice)}",
+                        fontWeight = FontWeight.Black,
+                        color = Color(0xFF111827)
+                    )
+                }
             }
 
             Spacer(Modifier.height(10.dp))
 
-            // ==========================
-            // CONTROLES CANTIDAD
-            // ==========================
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(
-                    onClick = onMinus,
-                    modifier = Modifier
-                        .size(36.dp)
-                        .clip(CircleShape)
-                        .background(Color(0xFFF3F4F6))
+
+                Row(
+                    modifier = Modifier.weight(1f),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(Icons.Default.Remove, contentDescription = "Disminuir")
+                    IconButton(
+                        onClick = onMinus,
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFFF3F4F6))
+                    ) {
+                        Icon(Icons.Default.Remove, contentDescription = "Disminuir")
+                    }
+
+                    Spacer(Modifier.width(10.dp))
+
+                    Text(
+                        item.quantity.toString(),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    Spacer(Modifier.width(10.dp))
+
+                    IconButton(
+                        onClick = onPlus,
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFFEDEBFF))
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = "Aumentar", tint = Color(0xFF6D5DF6))
+                    }
                 }
 
-                Spacer(Modifier.width(8.dp))
-
-                Text(
-                    quantity.toString(),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-
-                Spacer(Modifier.width(8.dp))
-
                 IconButton(
-                    onClick = onPlus,
+                    onClick = onDelete,
                     modifier = Modifier
-                        .size(36.dp)
-                        .clip(CircleShape)
-                        .background(Color(0xFFF3F4F6))
+                        .size(40.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(Color(0xFFFFEDED))
                 ) {
-                    Icon(Icons.Default.Add, contentDescription = "Aumentar")
+                    Icon(Icons.Default.Delete, contentDescription = null, tint = Color(0xFFD32F2F))
                 }
             }
         }
@@ -293,14 +425,17 @@ private fun CartItemCard(
 }
 
 // =====================================================================
-// ⭐ RESUMEN
+// ✅ RESUMEN PRO (subtotal vs total)
 // =====================================================================
 @Composable
-private fun CartSummary(
+private fun CartSummaryPro(
+    subtotal: Double,
     total: Double,
     onPayClick: () -> Unit,
     onClearClick: () -> Unit
 ) {
+    val ahorro = (subtotal - total).coerceAtLeast(0.0)
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(18.dp),
@@ -311,13 +446,24 @@ private fun CartSummary(
             Modifier
                 .fillMaxWidth()
                 .padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
 
-            Row(
-                Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text("Subtotal", color = Color.Gray)
+                Text("S/ ${"%.2f".format(subtotal)}", fontWeight = FontWeight.SemiBold)
+            }
+
+            if (ahorro > 0) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text("Ahorro por ofertas", color = Color(0xFF10B981))
+                    Text("- S/ ${"%.2f".format(ahorro)}", color = Color(0xFF10B981), fontWeight = FontWeight.Bold)
+                }
+            }
+
+            Divider()
+
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text("Total", style = MaterialTheme.typography.titleMedium)
                 Text(
                     "S/ ${"%.2f".format(total)}",

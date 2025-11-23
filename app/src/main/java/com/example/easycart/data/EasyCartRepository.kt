@@ -28,28 +28,23 @@ class EasyCartRepository(
     fun currentUser(): FirebaseUser? = auth.currentUser
 
     // ===========================================================
-    // LOGIN / REGISTER (Placeholders)
+    // LOGIN / REGISTER FAKE (mantengo tu lógica)
     // ===========================================================
-
     fun login(email: String, password: String): AuthResult {
         return AuthResult(isSuccess = true)
     }
 
-    fun register(
-        fullName: String,
-        email: String,
-        password: String,
-        phone: String
-    ): AuthResult {
+    fun register(fullName: String, email: String, password: String, phone: String): AuthResult {
         return AuthResult(isSuccess = true)
     }
 
+
     // ===========================================================
-    // ⭐ AÑADIR PRODUCTO AL CARRITO CON OFERTA
+    // ⭐ AÑADIR PRODUCTO AL CARRITO (OFERTAS COMPLETAS)
     // ===========================================================
     suspend fun addOrIncrementCartItem(uid: String, product: Product) {
-        val productId =
-            product.id ?: throw IllegalArgumentException("Product ID cannot be null")
+
+        val productId = product.id ?: throw IllegalArgumentException("Product ID cannot be null")
 
         val cartItemRef = db.collection("carts")
             .document(uid)
@@ -59,29 +54,38 @@ class EasyCartRepository(
         try {
             db.runTransaction { transaction ->
 
-                val snapshot = transaction.get(cartItemRef)
+                val snap = transaction.get(cartItemRef)
+
+                val hasOffer = product.hasOffer
+                val offerPrice = product.offerPrice
+                val finalUnitPrice =
+                    if (hasOffer && offerPrice != null) offerPrice else product.price
+
+                val discountPercent =
+                    if (hasOffer && offerPrice != null && product.price > 0)
+                        (((product.price - offerPrice) / product.price) * 100).toInt()
+                    else null
 
                 // ----------------------------
-                // SI YA EXISTE, SOLO SUMAMOS
+                // SI YA EXISTE → sumar cantidad
                 // ----------------------------
-                if (snapshot.exists()) {
+                if (snap.exists()) {
 
-                    val currentQuantity = snapshot.getLong("quantity")?.toInt() ?: 0
-                    val newQuantity = currentQuantity + 1
+                    val currentQty = snap.getLong("quantity")?.toInt() ?: 0
+                    val newQty = currentQty + 1
 
-                    if (newQuantity > product.stock) {
+                    if (newQty > product.stock)
                         throw Exception("Stock insuficiente para ${product.name}")
-                    }
-
-                    val finalUnit =
-                        if (product.hasOffer && product.offerPrice != null)
-                            product.offerPrice!!
-                        else product.price
 
                     transaction.update(
-                        cartItemRef, mapOf(
-                            "quantity" to newQuantity,
-                            "totalPrice" to newQuantity * finalUnit
+                        cartItemRef,
+                        mapOf(
+                            "quantity" to newQty,
+                            "hasOffer" to hasOffer,
+                            "offerPrice" to offerPrice,
+                            "discountPercent" to discountPercent,
+                            "unitPrice" to product.price,
+                            "totalPrice" to newQty * finalUnitPrice
                         )
                     )
 
@@ -89,33 +93,25 @@ class EasyCartRepository(
                 }
 
                 // ----------------------------
-                // SI ES NUEVO → GUARDAMOS OFERTA
+                // SI ES NUEVO → guardar info completa
                 // ----------------------------
-                val discountPercent = when {
-                    product.hasOffer && product.offerPrice != null ->
-                        (((product.price - product.offerPrice) / product.price) * 100).toInt()
-
-                    else -> null
-                }
-
-                val newItem = CartItem(
+                val item = CartItem(
                     id = productId,
                     productId = productId,
                     productName = product.name,
                     barcode = product.barcode,
-                    quantity = 1,
 
-                    // precios
+                    quantity = 1,
                     unitPrice = product.price,
-                    hasOffer = product.hasOffer,
-                    offerPrice = product.offerPrice,
+                    hasOffer = hasOffer,
+                    offerPrice = offerPrice,
                     discountPercent = discountPercent,
 
                     maxStock = product.stock,
                     expiresAt = product.expiresAt
                 )
 
-                transaction.set(cartItemRef, newItem, SetOptions.merge())
+                transaction.set(cartItemRef, item, SetOptions.merge())
                 null
             }.await()
 
@@ -124,34 +120,39 @@ class EasyCartRepository(
         }
     }
 
+
     // ===========================================================
-    // ⭐ ESCUCHAR CARRITO EN TIEMPO REAL
+    // ⭐ ESCUCHAR CARRITO
     // ===========================================================
     fun listenCart(uid: String): Flow<List<CartItem>> = callbackFlow {
+
         val listener = db.collection("carts")
             .document(uid)
             .collection("items")
             .addSnapshotListener { snap, e ->
-                if (e != null) close(e)
-                else trySend(snap?.toObjects(CartItem::class.java) ?: emptyList())
+                if (e != null) {
+                    close(e)
+                } else {
+                    trySend(snap?.toObjects(CartItem::class.java) ?: emptyList())
+                }
             }
 
         awaitClose { listener.remove() }
     }
 
+
     // ===========================================================
-    // BUSCAR PRODUCTO
+    // BUSCAR PRODUCTO POR CÓDIGO
     // ===========================================================
     suspend fun findProductByBarcode(barcode: String): Product? {
         return try {
-            val snapshot = db.collection("products")
+            val snap = db.collection("products")
                 .whereEqualTo("barcode", barcode)
                 .limit(1)
                 .get()
                 .await()
 
-            val doc = snapshot.documents.firstOrNull() ?: return null
-
+            val doc = snap.documents.firstOrNull() ?: return null
             doc.toObject(Product::class.java)?.copy(id = doc.id)
 
         } catch (e: Exception) {
@@ -160,8 +161,9 @@ class EasyCartRepository(
         }
     }
 
+
     // ===========================================================
-    // ⭐ DECREMENTAR CANTIDAD
+    // ⭐ DECREMENTAR CANTIDAD (respeta oferta)
     // ===========================================================
     suspend fun decrementCartItem(uid: String, productId: String) {
 
@@ -176,16 +178,15 @@ class EasyCartRepository(
                 val snap = transaction.get(cartItemRef)
                 if (!snap.exists()) return@runTransaction
 
-                val currentQuantity = snap.getLong("quantity")?.toInt() ?: 0
+                val quantity = snap.getLong("quantity")?.toInt() ?: 0
                 val unitPrice = snap.getDouble("unitPrice") ?: 0.0
                 val offer = snap.getDouble("offerPrice")
                 val hasOffer = snap.getBoolean("hasOffer") ?: false
 
                 val finalUnitPrice = if (hasOffer && offer != null) offer else unitPrice
 
-                if (currentQuantity > 1) {
-
-                    val newQty = currentQuantity - 1
+                if (quantity > 1) {
+                    val newQty = quantity - 1
                     transaction.update(
                         cartItemRef,
                         mapOf(
@@ -193,7 +194,6 @@ class EasyCartRepository(
                             "totalPrice" to newQty * finalUnitPrice
                         )
                     )
-
                 } else {
                     transaction.delete(cartItemRef)
                 }
@@ -206,18 +206,16 @@ class EasyCartRepository(
         }
     }
 
+
     // ===========================================================
-    // VACIAR CARRITO
+    // ⭐ ELIMINAR TODO / LIMPIAR CARRITO
     // ===========================================================
     suspend fun clearCart(uid: String) {
         try {
-            val items =
-                db.collection("carts").document(uid).collection("items").get().await()
+            val snap = db.collection("carts").document(uid).collection("items").get().await()
 
             val batch = db.batch()
-
-            items.documents.forEach { batch.delete(it.reference) }
-
+            snap.documents.forEach { batch.delete(it.reference) }
             batch.commit().await()
 
         } catch (e: Exception) {
@@ -225,38 +223,46 @@ class EasyCartRepository(
         }
     }
 
+
     // ===========================================================
-    // ⭐ FINALIZAR COMPRA (RESTAR STOCK + GUARDAR HISTORIAL)
+    // ⭐ FINALIZAR COMPRA (STOCK + HISTORIAL)
     // ===========================================================
     suspend fun finalizePurchase(uid: String, cart: List<CartItem>): Boolean {
+
         if (cart.isEmpty()) return false
 
         return try {
+
             db.runTransaction { transaction ->
 
-                // 1. Restar stock
+                // ----------------------------
+                // 1. RESTAR STOCK
+                // ----------------------------
                 cart.forEach { item ->
-                    val productRef = db.collection("products").document(item.productId)
-                    val snap = transaction.get(productRef)
+
+                    val prodRef = db.collection("products").document(item.productId)
+                    val snap = transaction.get(prodRef)
 
                     if (snap.exists()) {
-                        val currentStock = snap.getLong("stock")?.toInt() ?: 0
-                        val newStock = currentStock - item.quantity
+                        val stock = snap.getLong("stock")?.toInt() ?: 0
+                        val newStock = stock - item.quantity
 
-                        if (newStock < 0) {
+                        if (newStock < 0)
                             throw Exception("Stock insuficiente para ${item.productName}")
-                        }
-                        transaction.update(productRef, "stock", newStock)
+
+                        transaction.update(prodRef, "stock", newStock)
                     }
                 }
 
-                // 2. Registrar compra
+                // ----------------------------
+                // 2. GUARDAR COMPRA
+                // ----------------------------
                 val purchaseRef = db.collection("users")
                     .document(uid)
                     .collection("purchases")
                     .document()
 
-                val purchaseData = mapOf(
+                val data = mapOf(
                     "date" to Date(),
                     "total" to cart.sumOf { it.totalPrice },
                     "items" to cart.map {
@@ -269,10 +275,11 @@ class EasyCartRepository(
                     }
                 )
 
-                transaction.set(purchaseRef, purchaseData)
+                transaction.set(purchaseRef, data)
                 null
             }.await()
 
+            // Borrado fuera de la transacción
             clearCart(uid)
             true
 
@@ -281,6 +288,7 @@ class EasyCartRepository(
             false
         }
     }
+
 
     // ===========================================================
     // HISTORIAL
@@ -301,17 +309,21 @@ class EasyCartRepository(
         }
     }
 
+
     // ===========================================================
     // LISTEN PRODUCTS
     // ===========================================================
     fun listenProducts(): Flow<List<Product>> = callbackFlow {
+
         val listener = db.collection("products")
             .addSnapshotListener { snap, e ->
                 if (e != null) close(e)
                 else trySend(snap?.toObjects(Product::class.java) ?: emptyList())
             }
+
         awaitClose { listener.remove() }
     }
+
 
     fun listenOffers(): Flow<List<Offer>> = callbackFlow { awaitClose {} }
 }

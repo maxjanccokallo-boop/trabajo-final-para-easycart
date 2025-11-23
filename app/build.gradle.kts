@@ -56,58 +56,61 @@ buildscript {
 
 dependencies {
 
+    // ===== ANDROIDX =====
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
+
+    // ===== COMPOSE =====
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
+    implementation("androidx.compose.material:material-icons-extended:1.6.1")
 
-    // Firebase
+    // ===== FIREBASE =====
     implementation(platform("com.google.firebase:firebase-bom:33.4.0"))
     implementation("com.google.firebase:firebase-auth-ktx")
     implementation("com.google.firebase:firebase-firestore-ktx")
 
-    // Coroutines
+    // ===== COROUTINES =====
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.8.1")
 
-    // Lifecycle
+    // ===== LIFECYCLE =====
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.6")
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.6")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.6")
 
-    // Navigation
+    // ===== NAVIGATION =====
     implementation("androidx.navigation:navigation-compose:2.8.3")
 
-    // ZXing
+    // ===== ZXING – QR GENERATOR (OBLIGATORIO PARA QR) =====
     implementation("com.google.zxing:core:3.5.1")
     implementation("com.journeyapps:zxing-android-embedded:4.3.0")
     implementation("com.google.guava:guava:31.1-android")
-    implementation("androidx.compose.material:material-icons-extended:1.6.1")
 
-    // Google Sign-In
-    implementation(libs.androidx.credentials)
-    implementation(libs.androidx.credentials.play.services.auth)
-    implementation(libs.googleid)
-
-    // Coil
+    // ===== COIL (IMÁGENES) =====
     implementation("io.coil-kt:coil-compose:2.4.0")
     implementation("io.coil-kt:coil:2.4.0")
 
-    // ======== CameraX (CORRECTO PARA .kts) ========
+    // ===== CAMERAX =====
     val cameraxVersion = "1.3.1"
     implementation("androidx.camera:camera-core:$cameraxVersion")
     implementation("androidx.camera:camera-camera2:$cameraxVersion")
     implementation("androidx.camera:camera-lifecycle:$cameraxVersion")
     implementation("androidx.camera:camera-view:$cameraxVersion")
 
-    // ======== ML Kit (CORRECTO PARA .kts) ========
+    // ===== ML KIT BARCODE SCAN =====
     implementation("com.google.mlkit:barcode-scanning:17.2.0")
 
-    // Tests
+    // ===== GOOGLE SIGN-IN =====
+    implementation(libs.androidx.credentials)
+    implementation(libs.androidx.credentials.play.services.auth)
+    implementation(libs.googleid)
+
+    // ===== TESTS =====
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
