@@ -7,11 +7,13 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.easycart.ui.navigation.BottomTab
+import com.example.easycart.ui.components.EasyCartBottomBar
 import com.example.easycart.ui.theme.GreenPrimary
 import com.example.easycart.viewmodel.MainViewModel
 import com.example.easycart.viewmodel.LedState
@@ -26,112 +28,127 @@ fun HomeScreen(
     ),
     onLogout: () -> Unit
 ) {
-
-    // ⭐ CRÍTICO: selectedTab define la pestaña actual
+    // ⭐ Control de la pestaña seleccionada
     var selectedTab by remember { mutableStateOf(BottomTab.Scan) }
     val uiState by viewModel.uiState.collectAsState()
 
-    // Lógica del color del LED
+    // ⭐ LED animado
     val ledColor = when (uiState.ledState) {
-        LedState.GREEN -> Color.Green
-        LedState.RED -> Color.Red
-        LedState.YELLOW -> Color.Yellow
+        LedState.GREEN -> Color(0xFF22C55E)
+        LedState.RED -> Color(0xFFEF4444)
+        LedState.YELLOW -> Color(0xFFFACC15)
     }
 
-    Scaffold(
-        bottomBar = {
-            NavigationBar {
-                BottomTab.values().forEach { tab ->
-                    NavigationBarItem(
-                        selected = selectedTab == tab,
-                        onClick = { selectedTab = tab },
-                        icon = { Text(tab.label.first().toString()) },
-                        label = { Text(tab.label) }
-                    )
-                }
-            }
-        },
-        topBar = {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(GreenPrimary)
-                    .padding(horizontal = 16.dp, vertical = 10.dp)
-            ) {
+    // ⭐ Fondo general más bonito
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFFF5F7FB))
+    ) {
 
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth()
+        Scaffold(
+            bottomBar = {
+                EasyCartBottomBar(
+                    selectedTab = selectedTab,
+                    onTabSelected = { selectedTab = it }
+                )
+            },
+            topBar = {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(GreenPrimary)
+                        .shadow(6.dp)
+                        .padding(horizontal = 16.dp, vertical = 12.dp)
                 ) {
-                    Column(Modifier.weight(1f)) {
+
+                    // ==========================================
+                    // 🟢 FILA SUPERIOR (Nombre y carrito)
+                    // ==========================================
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                "Hola, ${uiState.user?.email ?: "usuario"} 👋",
+                                color = MaterialTheme.colorScheme.onPrimary,
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                            Text(
+                                "✓ Todo Correcto",
+                                color = MaterialTheme.colorScheme.onPrimary,
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
                         Text(
-                            "Hola, ${uiState.user?.email ?: "usuario"}",
-                            color = MaterialTheme.colorScheme.onPrimary
-                        )
-                        Text(
-                            "✓ Todo Correcto",
-                            color = MaterialTheme.colorScheme.onPrimary
+                            "🛒 ${uiState.cart.sumOf { it.quantity }}",
+                            color = MaterialTheme.colorScheme.onPrimary,
+                            style = MaterialTheme.typography.titleMedium
                         )
                     }
-                    Text(
-                        // Muestra la cantidad total de items en el carrito
-                        "🛒 ${uiState.cart.sumOf { it.quantity }}",
-                        color = MaterialTheme.colorScheme.onPrimary
-                    )
-                }
 
-                Spacer(Modifier.height(4.dp))
+                    Spacer(Modifier.height(8.dp))
 
-                // IMPLEMENTACIÓN DEL INDICADOR LED
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = "Estado LED:",
-                        color = MaterialTheme.colorScheme.onPrimary
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    Box(
-                        Modifier
-                            .size(14.dp)
-                            .background(ledColor, shape = CircleShape)
-                    )
+                    // ==========================================
+                    // 🟡 LED con estilo PRO
+                    // ==========================================
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = "Estado LED:",
+                            color = MaterialTheme.colorScheme.onPrimary
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Box(
+                            Modifier
+                                .size(16.dp)
+                                .background(ledColor, shape = CircleShape)
+                        )
+                    }
                 }
             }
-        }
-    ) { paddingValues ->
+        ) { paddingValues ->
 
-        Box(Modifier.padding(paddingValues)) {
+            // ===============================
+            // ⭐ CONTENIDO DINÁMICO DE TABS
+            // ===============================
+            Box(
+                modifier = Modifier
+                    .padding(paddingValues)
+                    .fillMaxSize()
+            ) {
 
-            when (selectedTab) {
+                when (selectedTab) {
 
-                BottomTab.Scan ->
-                    ScanScreen(
-                        viewModel = viewModel,
-                        // ⭐ AÑADIDO: Si el escaneo es exitoso, cambiamos la pestaña a CART
-                        onScanSuccess = {
-                            selectedTab = BottomTab.Cart // ⭐ ¡Aquí está la magia!
-                        }
-                    )
+                    BottomTab.Scan ->
+                        ScanScreen(
+                            viewModel = viewModel,
+                            onScanSuccess = {
+                                selectedTab = BottomTab.Cart
+                            }
+                        )
 
-                BottomTab.Cart ->
-                    CartScreen(
-                        viewModel = viewModel,
-                        navController = navController
-                    )
+                    BottomTab.Cart ->
+                        CartScreen(
+                            viewModel = viewModel,
+                            navController = navController
+                        )
 
-                BottomTab.Products ->
-                    ProductsScreen(viewModel)
+                    BottomTab.Products ->
+                        ProductsScreen(viewModel)
 
-                BottomTab.Offers ->
-                    OffersScreen(viewModel)
+                    BottomTab.Offers ->
+                        OffersScreen(viewModel)
 
-                BottomTab.Bluetooth ->
-                    BluetoothScreen()
+                    BottomTab.Bluetooth ->
+                        BluetoothScreen()
 
-                BottomTab.Profile ->
-                    ProfileScreen(
-                        viewModel = viewModel,
-                        onLogout = onLogout
-                    )
+                    BottomTab.Profile ->
+                        ProfileScreen(
+                            viewModel = viewModel,
+                            onLogout = onLogout
+                        )
+                }
             }
         }
     }

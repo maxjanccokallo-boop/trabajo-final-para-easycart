@@ -10,7 +10,7 @@ object AppModule {
     private val auth = Firebase.auth
     private val firestore = Firebase.firestore
 
-    // ⭐ CORRECCIÓN: Aseguramos el orden correcto: auth, firestore
+
     val repo: EasyCartRepository by lazy {
         EasyCartRepository(
             auth = auth,
@@ -18,11 +18,11 @@ object AppModule {
         )
     }
 
-    // Si tienes un AuthViewModelFactory, iría aquí, pero lo manejas en MainActivity.
 
-    // Si tienes un MainViewModelFactory, debería estar aquí:
-    val mainRepo = repo // Renombramos la referencia para usarla en el Factory
+
+
+    val mainRepo = repo
     val repoForFactory = repo
 
-    val repoForAuthFactory = repo // Si tienes una factoría de AuthViewModel, usaría esta referencia.
+    val repoForAuthFactory = repo
 }

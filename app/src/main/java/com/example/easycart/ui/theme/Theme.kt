@@ -10,18 +10,34 @@ import androidx.compose.ui.graphics.Color
 private val LightColors = lightColorScheme(
     primary = BluePrimary,
     onPrimary = Color.White,
-    primaryContainer = BlueDark,
-    onPrimaryContainer = Color.White,
-    secondary = GreenPrimary,
+    secondary = PurpleAccent,
     onSecondary = Color.White,
+
     background = BackgroundLight,
+    onBackground = TextPrimaryDark,
+
     surface = Color.White,
-    onSurface = Color(0xFF1C1C1E)
+    onSurface = TextPrimaryDark,
+
+    error = RedPrimary,
+    onError = Color.White
 )
 
 private val DarkColors = darkColorScheme(
     primary = BluePrimary,
-    secondary = GreenPrimary
+    onPrimary = Color.White,
+
+    secondary = PurpleAccent,
+    onSecondary = Color.White,
+
+    background = BackgroundDark,
+    onBackground = Color.White,
+
+    surface = Color(0xFF1A1A1A),
+    onSurface = Color.White,
+
+    error = RedPrimary,
+    onError = Color.White
 )
 
 @Composable
@@ -29,11 +45,9 @@ fun EasyCartTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit
 ) {
-    val colors = if (darkTheme) DarkColors else LightColors
-
     MaterialTheme(
-        colorScheme = colors,
-        typography = androidx.compose.material3.Typography(),
+        colorScheme = if (darkTheme) DarkColors else LightColors,
+        typography = Typography,
         content = content
     )
 }

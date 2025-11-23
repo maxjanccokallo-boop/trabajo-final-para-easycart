@@ -12,7 +12,6 @@ data class UserProfile(
 )
 
 data class Product(
-    // ⭐ 2. CORRECCIÓN: Usa @DocumentId para que Firestore inyecte el ID aquí.
     @DocumentId
     val id: String? = null,
     val name: String = "",

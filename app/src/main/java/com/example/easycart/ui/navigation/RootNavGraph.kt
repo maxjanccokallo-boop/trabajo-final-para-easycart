@@ -19,8 +19,6 @@ fun RootNavGraph(
     mainViewModel: MainViewModel
 ) {
 
-    // ⭐ Ya no necesitamos CART_ROUTE aquí ya que la navegación es interna del HomeScreen
-    // val CART_ROUTE = "cart_tab"
 
     NavHost(
         navController = navController,
