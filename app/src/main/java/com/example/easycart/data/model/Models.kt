@@ -34,11 +34,23 @@ data class CartItem(
     val productName: String = "",
     val barcode: String = "",
     val quantity: Int = 1,
+
+    // ⭐ precio normal
     val unitPrice: Double = 0.0,
+
+    // ⭐ SI EL PRODUCTO TIENE OFERTA (Firebase)
+    val hasOffer: Boolean = false,
+    val offerPrice: Double? = null,
+    val discountPercent: Int? = null,
+
     val maxStock: Int = 0,
     val expiresAt: Timestamp? = null
 ) {
-    val totalPrice: Double get() = quantity * unitPrice
+    val finalUnitPrice: Double
+        get() = if (hasOffer && offerPrice != null) offerPrice else unitPrice
+
+    val totalPrice: Double
+        get() = quantity * finalUnitPrice
 }
 
 data class Offer(
