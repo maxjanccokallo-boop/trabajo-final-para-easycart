@@ -15,11 +15,7 @@ import kotlinx.coroutines.delay
 // ===========================================================
 // LED STATE
 // ===========================================================
-enum class LedState {
-    RED,
-    YELLOW,
-    GREEN
-}
+enum class LedState { RED, YELLOW, GREEN }
 
 // ===========================================================
 // UI STATE
@@ -29,11 +25,14 @@ data class MainUiState(
     val products: List<Product> = emptyList(),
     val cart: List<CartItem> = emptyList(),
     val offers: List<Offer> = emptyList(),
+    val purchases: List<Purchase> = emptyList(),
+
     val total: Double = 0.0,
+
     val scanError: String? = null,
-    val lastScanned: String? = null, // Usado para disparar la navegación al carrito
-    val ledState: LedState = LedState.RED,
-    val purchases: List<Purchase> = emptyList()
+    val lastScanned: String? = null,
+
+    val ledState: LedState = LedState.RED
 )
 
 // ===========================================================
@@ -43,7 +42,9 @@ class MainViewModel(
     private val repo: EasyCartRepository
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(MainUiState(user = repo.currentUser()))
+    private val _uiState = MutableStateFlow(
+        MainUiState(user = repo.currentUser())
+    )
     val uiState: StateFlow<MainUiState> = _uiState.asStateFlow()
 
     init {
@@ -54,62 +55,46 @@ class MainViewModel(
     }
 
     // ===========================================================
-    // FIRESTORE LISTENERS
+    // OBSERVERS FIRESTORE
     // ===========================================================
-
-    private fun observeProducts() {
-        viewModelScope.launch {
-            repo.listenProducts().collect { list ->
-                _uiState.update { it.copy(products = list) }
-            }
+    private fun observeProducts() = viewModelScope.launch {
+        repo.listenProducts().collect { list ->
+            _uiState.update { it.copy(products = list) }
         }
     }
 
-    private fun observeOffers() {
-        viewModelScope.launch {
-            repo.listenOffers().collect { list ->
-                _uiState.update { it.copy(offers = list) }
-            }
+    private fun observeOffers() = viewModelScope.launch {
+        repo.listenOffers().collect { list ->
+            _uiState.update { it.copy(offers = list) }
         }
     }
 
-    private fun observeCart() {
-        val uid = repo.currentUser()?.uid ?: return
-        viewModelScope.launch {
-            repo.listenCart(uid).collect { items ->
-                val total = items.sumOf { item ->
-                    item.unitPrice * item.quantity
-                }
-                _uiState.update { it.copy(cart = items, total = total) }
-            }
+    private fun observeCart() = viewModelScope.launch {
+        val uid = repo.currentUser()?.uid ?: return@launch
+
+        repo.listenCart(uid).collect { items ->
+            val total = items.sumOf { it.unitPrice * it.quantity }
+            _uiState.update { it.copy(cart = items, total = total) }
         }
     }
 
     // ===========================================================
-    // LED CONTROL
+    // LED LOGIC (optimizada)
     // ===========================================================
-    fun activateGreenLED() {
-        _uiState.update { it.copy(ledState = LedState.GREEN) }
+    private fun flashLED(color: LedState, duration: Long = 1000) {
         viewModelScope.launch {
-            delay(1000)
+            _uiState.update { it.copy(ledState = color) }
+            delay(duration)
             _uiState.update { it.copy(ledState = LedState.RED) }
         }
     }
 
-    fun activateRedLED() {
-        _uiState.update { it.copy(ledState = LedState.RED) }
-    }
-
-    fun activateYellowLED() {
-        viewModelScope.launch {
-            _uiState.update { it.copy(ledState = LedState.YELLOW) }
-            delay(3000)
-            _uiState.update { it.copy(ledState = LedState.RED) }
-        }
-    }
+    fun activateGreenLED() = flashLED(LedState.GREEN, 1000)
+    fun activateRedLED() = flashLED(LedState.RED, 1)   // RED permanente
+    fun activateYellowLED() = flashLED(LedState.YELLOW, 3000)
 
     // ===========================================================
-    // ESCANEO UNIVERSAL
+    // ESCANEO
     // ===========================================================
     fun onBarcodeScanned(rawBarcode: String) {
         val barcode = rawBarcode.trim()
@@ -119,8 +104,6 @@ class MainViewModel(
             val product = repo.findProductByBarcode(barcode)
 
             if (product != null) {
-                // ⭐ CORRECCIÓN CLAVE: Pasamos el producto individual ('product')
-                // en lugar de la lista de productos ('products').
                 addProductToCart(product)
                 activateGreenLED()
 
@@ -131,11 +114,9 @@ class MainViewModel(
                     )
                 }
 
-                // El delay largo evita que se bloqueen escaneos rápidos.
-                viewModelScope.launch {
-                    delay(2000)
-                    _uiState.update { it.copy(lastScanned = null) }
-                }
+                // Limpia el mensaje sin bloquear nuevos escaneos
+                delay(1800)
+                _uiState.update { it.copy(lastScanned = null) }
 
             } else {
                 activateRedLED()
@@ -150,50 +131,37 @@ class MainViewModel(
     }
 
     // ===========================================================
-    // CARRITO: AGREGAR / INCREMENTAR / DECREMENTAR
+    // CARRITO
     // ===========================================================
-    private fun addProductToCart(product: Product) {
-        viewModelScope.launch {
-            repo.addOrIncrementCartItem(
-                uid = repo.currentUser()?.uid ?: return@launch,
-                product = product
-            )
-        }
+    private fun addProductToCart(product: Product) = viewModelScope.launch {
+        val uid = repo.currentUser()?.uid ?: return@launch
+        repo.addOrIncrementCartItem(uid, product)
     }
 
-    fun increaseQuantity(item: CartItem) {
-        viewModelScope.launch {
-            val uid = repo.currentUser()?.uid ?: return@launch
+    fun increaseQuantity(item: CartItem) = viewModelScope.launch {
+        val uid = repo.currentUser()?.uid ?: return@launch
 
-            // Buscamos el producto en la lista de productos local para obtener los datos correctos
-            val productFromList = _uiState.value.products.firstOrNull { it.id == item.productId }
+        val productData =
+            _uiState.value.products.firstOrNull { it.id == item.productId }
+                ?: Product(
+                    id = item.productId,
+                    name = item.productName,
+                    barcode = item.barcode,
+                    price = item.unitPrice,
+                    stock = item.maxStock,
+                    expiresAt = item.expiresAt
+                )
 
-            val productToUpdate = productFromList ?: Product(
-                id = item.productId,
-                name = item.productName,
-                barcode = item.barcode,
-                price = item.unitPrice,
-                stock = item.maxStock,
-                expiresAt = item.expiresAt
-            )
-
-            repo.addOrIncrementCartItem(uid, productToUpdate)
-        }
+        repo.addOrIncrementCartItem(uid, productData)
     }
 
-    fun decreaseQuantity(item: CartItem) {
-        viewModelScope.launch {
-            val uid = repo.currentUser()?.uid ?: return@launch
-            repo.decrementCartItem(uid, item.productId)
-        }
+    fun decreaseQuantity(item: CartItem) = viewModelScope.launch {
+        val uid = repo.currentUser()?.uid ?: return@launch
+        repo.decrementCartItem(uid, item.productId)
     }
 
-    fun clearCart() {
-        viewModelScope.launch {
-            repo.clearCart(
-                uid = repo.currentUser()?.uid ?: return@launch
-            )
-        }
+    fun clearCart() = viewModelScope.launch {
+        repo.clearCart(uid = repo.currentUser()?.uid ?: return@launch)
     }
 
     // ===========================================================
@@ -201,32 +169,31 @@ class MainViewModel(
     // ===========================================================
     fun finalizePurchase() {
         viewModelScope.launch {
-
-            val cart = _uiState.value.cart
             val user = repo.currentUser() ?: return@launch
+            val cart = _uiState.value.cart
 
-            // Llama al repositorio para la transacción de pago/stock/limpieza
             val success = repo.finalizePurchase(user.uid, cart)
 
             if (success) {
                 activateGreenLED()
                 loadPurchases()
-                // El observeCart se encarga de vaciar la UI porque Firestore se actualiza
             } else {
                 activateRedLED()
-                _uiState.update { it.copy(scanError = "Error al finalizar la compra y actualizar stock.") }
+                _uiState.update {
+                    it.copy(scanError = "Error al finalizar la compra.")
+                }
             }
         }
     }
 
     // ===========================================================
-    // HISTORIAL DE COMPRAS
+    // HISTORIAL COMPRAS
     // ===========================================================
     fun loadPurchases() {
-        val user = repo.currentUser() ?: return
+        val uid = repo.currentUser()?.uid ?: return
 
         viewModelScope.launch {
-            val list = repo.loadPurchases(user.uid)
+            val list = repo.loadPurchases(uid)
             _uiState.update { it.copy(purchases = list) }
         }
     }
