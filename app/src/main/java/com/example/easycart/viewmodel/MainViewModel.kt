@@ -18,6 +18,16 @@ import kotlinx.coroutines.delay
 enum class LedState { RED, YELLOW, GREEN }
 
 // ===========================================================
+// ✅ Scan history model (NUEVO)
+// ===========================================================
+data class ScanEntry(
+    val barcode: String = "",
+    val label: String = "",          // nombre producto o mensaje
+    val success: Boolean = false,
+    val timestamp: Long = System.currentTimeMillis()
+)
+
+// ===========================================================
 // UI STATE
 // ===========================================================
 data class MainUiState(
@@ -31,6 +41,9 @@ data class MainUiState(
 
     val scanError: String? = null,
     val lastScanned: String? = null,
+
+    // ✅ HISTORIAL REAL DE ESCANEOS (NUEVO)
+    val scanHistory: List<ScanEntry> = emptyList(),
 
     val ledState: LedState = LedState.RED
 )
@@ -107,23 +120,41 @@ class MainViewModel(
                 addProductToCart(product)
                 activateGreenLED()
 
+                // ✅ Guardar historial OK
                 _uiState.update {
                     it.copy(
                         lastScanned = product.name,
-                        scanError = null
+                        scanError = null,
+                        scanHistory = listOf(
+                            ScanEntry(
+                                barcode = barcode,
+                                label = product.name,
+                                success = true,
+                                timestamp = System.currentTimeMillis()
+                            )
+                        ) + it.scanHistory
                     )
                 }
 
-                // Limpia el mensaje sin bloquear nuevos escaneos
                 delay(1800)
                 _uiState.update { it.copy(lastScanned = null) }
 
             } else {
                 activateRedLED()
+
+                // ✅ Guardar historial FAIL
                 _uiState.update {
                     it.copy(
                         scanError = "Producto no encontrado",
-                        lastScanned = null
+                        lastScanned = null,
+                        scanHistory = listOf(
+                            ScanEntry(
+                                barcode = barcode,
+                                label = "Producto no encontrado",
+                                success = false,
+                                timestamp = System.currentTimeMillis()
+                            )
+                        ) + it.scanHistory
                     )
                 }
             }
@@ -196,5 +227,10 @@ class MainViewModel(
             val list = repo.loadPurchases(uid)
             _uiState.update { it.copy(purchases = list) }
         }
+    }
+
+    // ✅ Opcional: limpiar historial desde UI
+    fun clearScanHistory() {
+        _uiState.update { it.copy(scanHistory = emptyList()) }
     }
 }
