@@ -58,7 +58,10 @@ fun RootNavGraph(
         composable("payment_success") {
             PaymentSuccessScreen(
                 onDone = {
-                    navController.popBackStack(Screen.Home.route, false)
+                    navController.navigate(Screen.Home.route) {
+                        popUpTo(Screen.Home.route) { inclusive = true }
+                        launchSingleTop = true
+                    }
                 }
             )
         }
