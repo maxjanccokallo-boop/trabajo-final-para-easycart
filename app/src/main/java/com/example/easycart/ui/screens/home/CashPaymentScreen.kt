@@ -1,8 +1,6 @@
 package com.example.easycart.ui.screens.home
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -15,6 +13,8 @@ import androidx.navigation.NavController
 import com.example.easycart.viewmodel.MainViewModel
 import java.text.SimpleDateFormat
 import java.util.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+
 
 @Composable
 fun CashPaymentScreen(
@@ -22,16 +22,17 @@ fun CashPaymentScreen(
     viewModel: MainViewModel
 ) {
     val uiState by viewModel.uiState.collectAsState()
-
     val date = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(Date())
 
     Column(
-        Modifier
+        modifier = Modifier
             .fillMaxSize()
             .padding(20.dp)
     ) {
 
+        // --------------------
         // TÍTULO
+        // --------------------
         Text(
             "Confirmar Pago en Efectivo",
             style = MaterialTheme.typography.titleLarge,
@@ -39,15 +40,13 @@ fun CashPaymentScreen(
         )
 
         Spacer(Modifier.height(14.dp))
-
         Text("Fecha: $date", color = Color.Gray)
-
         Spacer(Modifier.height(20.dp))
 
 
-        // ============================
-        //   BOLETA PREVIA
-        // ============================
+        // --------------------
+        // BOLETA PREVIA
+        // --------------------
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(18.dp),
@@ -56,7 +55,6 @@ fun CashPaymentScreen(
             Column(Modifier.padding(16.dp)) {
 
                 Text("🧾 Boleta de Compra", fontWeight = FontWeight.Bold)
-
                 Spacer(Modifier.height(12.dp))
 
                 uiState.cart.forEach { item ->
@@ -64,10 +62,9 @@ fun CashPaymentScreen(
                         Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text("${item.productName} x${item.quantity}")
+                        Text("${item.productName}  x${item.quantity}")
                         Text("S/ ${String.format("%.2f", item.totalPrice)}")
                     }
-
                     Spacer(Modifier.height(6.dp))
                 }
 
@@ -90,22 +87,37 @@ fun CashPaymentScreen(
             }
         }
 
-        Spacer(Modifier.height(20.dp))
+        Spacer(Modifier.height(30.dp))
 
-        // BOTÓN DE CONFIRMAR
+
+        // --------------------
+        // BOTÓN CONFIRMAR
+        // --------------------
         Button(
+            onClick = {
+                // Limpia carrito
+                viewModel.clearCart()
+
+                // Navega a pantalla final
+                navController.navigate("payment_success") {
+                    popUpTo("cash_payment") { inclusive = true }
+                    launchSingleTop = true
+                }
+            },
             modifier = Modifier
                 .fillMaxWidth()
-                .height(50.dp),
+                .height(55.dp),
             shape = RoundedCornerShape(16.dp),
-            onClick = {
-                viewModel.clearCart()        // Limpia el carrito
-                navController.navigate("payment_success") {
-                    popUpTo("cart") { inclusive = true }
-                }
-            }
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Color(0xFF4CAF50),
+                contentColor = Color.White
+            ),
+            elevation = ButtonDefaults.buttonElevation(
+                defaultElevation = 6.dp,
+                pressedElevation = 10.dp
+            )
         ) {
-            Text("Confirmar pago")
+            Text("Confirmar pago", fontWeight = FontWeight.Bold, fontSize = 18.sp)
         }
     }
 }

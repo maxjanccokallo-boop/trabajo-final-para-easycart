@@ -1,6 +1,5 @@
 package com.example.easycart.ui.screens.home
 
-import android.graphics.Bitmap
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -16,6 +15,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
@@ -33,8 +33,9 @@ fun PaymentScreen(
     viewModel: MainViewModel
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
+
     var selected by remember { mutableStateOf("yape") }
-    var isLoading by remember { mutableStateOf(false) }
     var showVisaForm by remember { mutableStateOf(false) }
 
     Box(
@@ -46,10 +47,20 @@ fun PaymentScreen(
 
         Column(Modifier.fillMaxSize()) {
 
-            Text("Método de Pago", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Black)
+            // ---------------------------
+            // TÍTULO
+            // ---------------------------
+            Text(
+                "Método de Pago",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Black
+            )
+
             Spacer(Modifier.height(12.dp))
 
-            // ---- QR YAPE
+            // ---------------------------
+            // OPCIÓN YAPE
+            // ---------------------------
             PaymentOptionCard(
                 title = "Pagar con Yape (QR)",
                 subtitle = "Escanea el QR desde tu app",
@@ -63,7 +74,9 @@ fun PaymentScreen(
 
             Spacer(Modifier.height(10.dp))
 
-            // ---- VISA
+            // ---------------------------
+            // OPCIÓN VISA
+            // ---------------------------
             PaymentOptionCard(
                 title = "Pagar con Visa",
                 subtitle = "Tarjeta débito o crédito",
@@ -75,50 +88,44 @@ fun PaymentScreen(
                 }
             )
 
-            Spacer(Modifier.height(18.dp))
+            Spacer(Modifier.height(20.dp))
 
-            // QR ✔✔✔
+            // ---------------------------
+            // QR YAPE
+            // ---------------------------
             if (selected == "yape") {
                 QRSection(amount = uiState.total)
             }
 
-            // FORMULARIO VISA ✔✔✔
+            // ---------------------------
+            // FORMULARIO VISA
+            // ---------------------------
             if (selected == "visa" && showVisaForm) {
-                VisaFormSection(
-                    onSaved = {
-                        showVisaForm = false
-                    }
-                )
+                VisaFormSection { showVisaForm = false }
             }
 
-            Spacer(Modifier.height(25.dp))
+            Spacer(Modifier.height(35.dp))
 
+            // ---------------------------
+            // CONFIRMAR PAGO
+            // ---------------------------
             Button(
                 onClick = {
-                    isLoading = true
-                    viewModel.finalizePurchase { ok ->
-                        isLoading = false
-                        if (ok) navController.navigate("payment_success")
-                    }
+                    navController.navigate("payment_success")
                 },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(54.dp),
-                shape = RoundedCornerShape(14.dp),
-                enabled = !isLoading
+                shape = RoundedCornerShape(14.dp)
             ) {
-                if (isLoading) {
-                    CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.size(20.dp))
-                } else {
-                    Text("Confirmar pago", fontWeight = FontWeight.Bold)
-                }
+                Text("Confirmar pago", fontWeight = FontWeight.Bold)
             }
         }
     }
 }
 
 // =====================================================================
-// ⭐ Tarjeta VISA - Formulario
+// ⭐ FORMULARIO TARJETA VISA
 // =====================================================================
 @Composable
 fun VisaFormSection(onSaved: () -> Unit) {
@@ -153,12 +160,12 @@ fun VisaFormSection(onSaved: () -> Unit) {
             modifier = Modifier.fillMaxWidth()
         )
 
-        Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(12.dp))
 
         Button(
-            onClick = { onSaved() },
+            onClick = onSaved,
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(10.dp)
+            shape = RoundedCornerShape(12.dp)
         ) {
             Text("Guardar tarjeta")
         }
@@ -166,15 +173,14 @@ fun VisaFormSection(onSaved: () -> Unit) {
 }
 
 // =====================================================================
-// ⭐ QR DE PAGO YAPE
+// ⭐ QR YAPE
 // =====================================================================
 @Composable
 fun QRSection(amount: Double) {
     val url = "https://yape.com.pe/pay?amount=${"%.2f".format(amount)}&ref=EASYCART123"
-
     val qrBitmap = remember { QrGenerator.generate(url) }
 
-    if (qrBitmap != null) {
+    qrBitmap?.let {
         Column(
             Modifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally
@@ -183,7 +189,7 @@ fun QRSection(amount: Double) {
             Spacer(Modifier.height(12.dp))
 
             Image(
-                bitmap = qrBitmap.asImageBitmap(),
+                bitmap = it.asImageBitmap(),
                 contentDescription = "QR Pago Yape",
                 modifier = Modifier.size(220.dp)
             )
@@ -192,7 +198,7 @@ fun QRSection(amount: Double) {
 }
 
 // =====================================================================
-// ⭐ Componente opción de pago
+// ⭐ TARJETA DE OPCIÓN DE PAGO
 // =====================================================================
 @Composable
 private fun PaymentOptionCard(
@@ -216,7 +222,7 @@ private fun PaymentOptionCard(
         Row(
             Modifier
                 .fillMaxWidth()
-                .padding(14.dp),
+                .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(icon, contentDescription = null, tint = Color(0xFF6D5DF6))

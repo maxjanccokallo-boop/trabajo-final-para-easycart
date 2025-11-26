@@ -216,8 +216,21 @@ class MainViewModel(
         val uid = uiState.value.user?.uid ?: return
         val cartNow = uiState.value.cart
 
+        // LOG previo
+        println("➡️ [VM] finalizePurchase() llamado con ${cartNow.size} items")
+
         viewModelScope.launch {
-            val ok = repository.finalizePurchase(uid, cartNow)
+
+            val ok = try {
+                repository.finalizePurchase(uid, cartNow)
+            } catch (e: Exception) {
+                println("❌ [VM] Error finalizando compra: ${e.message}")
+                false
+            }
+
+            // LOG resultante
+            println("⬅️ [VM] finalizePurchase() devolvió: $ok")
+
             onResult(ok)
         }
     }
