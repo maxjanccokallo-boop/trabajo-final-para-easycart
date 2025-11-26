@@ -118,13 +118,20 @@ class MainViewModel(
 
         viewModelScope.launch {
 
+            // ⭐ AGREGA ESTO PARA VER QUÉ ESTÁ FALLANDO ⭐
+            println("🔥 Escaneado: '$barcode'")
+            println("📦 Productos cargados en memoria:")
+            uiState.value.products.forEach {
+                println(" → '${it.barcode}' | ${it.name}")
+            }
+            // ⭐ FIN DEL BLOQUE DE PRUEBA ⭐
+
+
             val product = repository.findProductByBarcode(barcode)
 
             if (product != null) {
-
                 addProductToCart(product)
                 activateGreenLED()
-
                 _uiState.update {
                     it.copy(
                         lastScanned = product.name,
@@ -138,13 +145,8 @@ class MainViewModel(
                         ) + it.scanHistory
                     )
                 }
-
-                delay(1500)
-                _uiState.update { it.copy(lastScanned = null) }
-
             } else {
                 activateRedLED()
-
                 _uiState.update {
                     it.copy(
                         scanError = "Producto no encontrado",

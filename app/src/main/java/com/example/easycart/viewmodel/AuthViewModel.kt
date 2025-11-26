@@ -21,20 +21,21 @@ class AuthViewModel(
     val uiState: StateFlow<AuthUiState> = _uiState.asStateFlow()
 
     fun login(email: String, password: String, onSuccess: () -> Unit) {
-        viewModelScope.launch {
-            _uiState.value = AuthUiState(isLoading = true)
-            val result = repo.login(email, password)
+        _uiState.value = AuthUiState(isLoading = true)
 
-            _uiState.value = if (result.isSuccess) {
+        repo.login(email, password) { result ->
+            if (result.isSuccess) {
+                _uiState.value = AuthUiState()
                 onSuccess()
-                AuthUiState()
             } else {
-                AuthUiState(error = result.exceptionOrNull?.invoke()?.message ?: "Error de inicio de sesión")
+                _uiState.value = AuthUiState(
+                    error = result.exceptionOrNull?.invoke()?.message
+                        ?: "Error de inicio de sesión"
+                )
             }
         }
     }
 
-    // ⭐ CORRECCIÓN CRÍTICA: Se actualiza la firma de 'register' para aceptar todos los campos
     fun register(
         fullName: String,
         email: String,
@@ -42,17 +43,17 @@ class AuthViewModel(
         phone: String,
         onSuccess: () -> Unit
     ) {
-        viewModelScope.launch {
-            _uiState.value = AuthUiState(isLoading = true)
+        _uiState.value = AuthUiState(isLoading = true)
 
-            // Llama a la nueva función del repositorio
-            val result = repo.register(fullName, email, password, phone)
-
-            _uiState.value = if (result.isSuccess) {
+        repo.register(fullName, email, password, phone) { result ->
+            if (result.isSuccess) {
+                _uiState.value = AuthUiState()
                 onSuccess()
-                AuthUiState()
             } else {
-                AuthUiState(error = result.exceptionOrNull?.invoke()?.message ?: "Error de registro")
+                _uiState.value = AuthUiState(
+                    error = result.exceptionOrNull?.invoke()?.message
+                        ?: "Error de registro"
+                )
             }
         }
     }

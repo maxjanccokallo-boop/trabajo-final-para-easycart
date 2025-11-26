@@ -30,12 +30,30 @@ class EasyCartRepository(
     // ===========================================================
     // LOGIN / REGISTER FAKE (mantengo tu lógica)
     // ===========================================================
-    fun login(email: String, password: String): AuthResult {
-        return AuthResult(isSuccess = true)
+    fun login(email: String, password: String, onResult: (AuthResult) -> Unit) {
+        auth.signInWithEmailAndPassword(email, password)
+            .addOnSuccessListener {
+                onResult(AuthResult(isSuccess = true))
+            }
+            .addOnFailureListener { e ->
+                onResult(AuthResult(isSuccess = false, exceptionOrNull = { e }))
+            }
     }
 
-    fun register(fullName: String, email: String, password: String, phone: String): AuthResult {
-        return AuthResult(isSuccess = true)
+    fun register(
+        fullName: String,
+        email: String,
+        password: String,
+        phone: String,
+        onResult: (AuthResult) -> Unit
+    ) {
+        auth.createUserWithEmailAndPassword(email, password)
+            .addOnSuccessListener {
+                onResult(AuthResult(isSuccess = true))
+            }
+            .addOnFailureListener { e ->
+                onResult(AuthResult(isSuccess = false, exceptionOrNull = { e }))
+            }
     }
 
 
@@ -314,15 +332,20 @@ class EasyCartRepository(
     // LISTEN PRODUCTS
     // ===========================================================
     fun listenProducts(): Flow<List<Product>> = callbackFlow {
-
         val listener = db.collection("products")
             .addSnapshotListener { snap, e ->
                 if (e != null) close(e)
-                else trySend(snap?.toObjects(Product::class.java) ?: emptyList())
+                else {
+                    val list = snap!!.documents.mapNotNull { doc ->
+                        doc.toObject(Product::class.java)?.copy(id = doc.id)
+                    }
+                    trySend(list)
+                }
             }
-
         awaitClose { listener.remove() }
     }
+
+
 
 
     fun listenOffers(): Flow<List<Offer>> = callbackFlow { awaitClose {} }
