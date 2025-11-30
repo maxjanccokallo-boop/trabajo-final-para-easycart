@@ -29,13 +29,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.easycart.data.model.BtDeviceUi
 import com.example.easycart.viewmodel.BluetoothViewModel
-import com.example.easycart.viewmodel.LedState
 import com.example.easycart.viewmodel.MainViewModel
 import androidx.compose.foundation.BorderStroke
 import androidx.lifecycle.viewmodel.compose.viewModel
 
 // ===============================================================
-// 🎨 COLORES DINÁMICOS
+// 🎨 COLORES Y ESTILOS DINÁMICOS
 // ===============================================================
 
 private fun bgColor(dark: Boolean) = if (dark)
@@ -56,6 +55,7 @@ else
 
 private val PrimaryBlue = Color(0xFF2563EB)
 
+
 // ===============================================================
 // ⭐ PANTALLA BLUETOOTH COMPLETA
 // ===============================================================
@@ -63,37 +63,23 @@ private val PrimaryBlue = Color(0xFF2563EB)
 @Composable
 fun BluetoothScreen(
     mainViewModel: MainViewModel,
-    darkMode: Boolean   // <-- ADDED
+    darkMode: Boolean
 ) {
-
     val vm: BluetoothViewModel = viewModel()
 
-    LaunchedEffect(Unit) {
-        vm.refreshState()
-    }
+    LaunchedEffect(Unit) { vm.refreshState() }
 
-    // LED STATE
-    val uiState by mainViewModel.uiState.collectAsState()
-    val ledState = uiState.ledState
-    val ledColor = when (ledState) {
-        LedState.RED -> Color(0xFFEF4444)
-        LedState.YELLOW -> Color(0xFFFACC15)
-        LedState.GREEN -> Color(0xFF22C55E)
-    }
-
-    // BLUETOOTH
+    // CONTEXTO Y ADAPTER
     val ctx = LocalContext.current
     val manager = ctx.getSystemService(BluetoothManager::class.java)
     val adapter = manager.adapter
 
     var bluetoothEnabled by remember { mutableStateOf(adapter?.isEnabled == true) }
 
-    // ACTIVAR BT
+    // ACTIVAR BLUETOOTH
     val enableBtLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult()
-    ) {
-        bluetoothEnabled = adapter?.isEnabled == true
-    }
+    ) { bluetoothEnabled = adapter?.isEnabled == true }
 
     fun requestEnableBluetooth() {
         if (adapter != null && !adapter.isEnabled) {
@@ -101,7 +87,7 @@ fun BluetoothScreen(
         }
     }
 
-    // PERMISOS
+    // PERMISOS BLUETOOTH
     var permissionsGranted by remember { mutableStateOf(false) }
 
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -111,9 +97,7 @@ fun BluetoothScreen(
     }
 
     LaunchedEffect(Unit) {
-        val perms = mutableListOf(
-            Manifest.permission.ACCESS_FINE_LOCATION
-        )
+        val perms = mutableListOf(Manifest.permission.ACCESS_FINE_LOCATION)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             perms += Manifest.permission.BLUETOOTH_CONNECT
             perms += Manifest.permission.BLUETOOTH_SCAN
@@ -132,15 +116,14 @@ fun BluetoothScreen(
     var devices by remember { mutableStateOf(emptyList<BtDeviceUi>()) }
 
     fun loadBonded() {
-        devices =
-            adapter?.bondedDevices?.map {
-                BtDeviceUi(
-                    name = it.name ?: "Arduino",
-                    address = it.address,
-                    signal = (40..90).random(),
-                    battery = (70..100).random()
-                )
-            } ?: emptyList()
+        devices = adapter?.bondedDevices?.map {
+            BtDeviceUi(
+                name = it.name ?: "Arduino",
+                address = it.address,
+                signal = (40..90).random(),
+                battery = (70..100).random()
+            )
+        } ?: emptyList()
     }
 
     LaunchedEffect(bluetoothEnabled) {
@@ -153,7 +136,7 @@ fun BluetoothScreen(
 
 
     // ===============================================================
-    // UI
+    // UI PRINCIPAL
     // ===============================================================
 
     Column(
@@ -163,7 +146,9 @@ fun BluetoothScreen(
             .padding(16.dp)
     ) {
 
+        // -----------------------------------------------------------
         // HEADER
+        // -----------------------------------------------------------
         Card(
             Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(22.dp),
@@ -174,6 +159,7 @@ fun BluetoothScreen(
                     .background(headerGradient(darkMode))
                     .padding(18.dp)
             ) {
+
                 Row(verticalAlignment = Alignment.CenterVertically) {
 
                     Box(
@@ -213,6 +199,7 @@ fun BluetoothScreen(
                         color = Color.White
                     )
                     Spacer(Modifier.width(8.dp))
+
                     Switch(
                         checked = bluetoothEnabled,
                         onCheckedChange = {
@@ -239,17 +226,18 @@ fun BluetoothScreen(
         Spacer(Modifier.height(14.dp))
 
 
-        // ESTADO DE CONEXIÓN
+        // -----------------------------------------------------------
+        // ESTADO CONEXIÓN BLUETOOTH
+        // -----------------------------------------------------------
         Card(
             Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(18.dp),
             colors = CardDefaults.cardColors(
-                if (darkMode)
-                    Color(0xFF1D4ED8).copy(alpha = 0.18f)
-                else
-                    Color(0xFF1E7CF0).copy(alpha = 0.12f)
+                if (darkMode) Color(0xFF1D4ED8).copy(alpha = 0.18f)
+                else Color(0xFF1E7CF0).copy(alpha = 0.12f)
             )
         ) {
+
             Row(
                 Modifier.padding(14.dp),
                 verticalAlignment = Alignment.CenterVertically
@@ -298,87 +286,20 @@ fun BluetoothScreen(
         Spacer(Modifier.height(14.dp))
 
 
-        // ESTADO DEL SENSOR
-        Card(
-            Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(18.dp),
-            colors = CardDefaults.cardColors(cardColor(darkMode))
-        ) {
-            Column(Modifier.padding(14.dp)) {
-
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Lightbulb, null, tint = PrimaryBlue)
-                    Spacer(Modifier.width(8.dp))
-                    Text("Estado del Sensor", fontWeight = FontWeight.Bold, color = textPrimary(darkMode))
-                }
-
-                Spacer(Modifier.height(12.dp))
-
-                Card(
-                    Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(14.dp),
-                    colors = CardDefaults.cardColors(
-                        if (darkMode) Color(0xFF0F172A) else Color(0xFFF8FAFC)
-                    ),
-                    border = BorderStroke(1.dp, borderColor(darkMode))
-                ) {
-                    Column(Modifier.padding(14.dp)) {
-
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-
-                            Box(
-                                Modifier
-                                    .size(58.dp)
-                                    .clip(CircleShape)
-                                    .background(ledColor)
-                                    .border(4.dp, Color.White, CircleShape)
-                            )
-
-                            Spacer(Modifier.width(12.dp))
-
-                            Column {
-                                Text("LED", fontWeight = FontWeight.Bold, color = textPrimary(darkMode))
-                                Text(
-                                    when (ledState) {
-                                        LedState.RED -> "Esperando"
-                                        LedState.YELLOW -> "Alerta"
-                                        LedState.GREEN -> "Agregado"
-                                    },
-                                    color = textSecondary(darkMode),
-                                    fontSize = 12.sp
-                                )
-                            }
-                        }
-
-                        Spacer(Modifier.height(12.dp))
-
-                        Row(
-                            Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            LedChip("Espera", ledState == LedState.RED, darkMode)
-                            LedChip("Agregado", ledState == LedState.GREEN, darkMode)
-                            LedChip("Alerta", ledState == LedState.YELLOW, darkMode)
-                            LedChip("Escaneo", false, darkMode)
-                        }
-                    }
-                }
-            }
-        }
-
-        Spacer(Modifier.height(16.dp))
-
-
-        // DISPOSITIVOS DISPONIBLES
+        // -----------------------------------------------------------
+        // LISTA DE DISPOSITIVOS
+        // -----------------------------------------------------------
         Row(
             Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.WifiTethering, null, tint = PrimaryBlue)
-                Spacer(Modifier.width(6.dp))
-                Text("Dispositivos Disponibles", fontWeight = FontWeight.Bold, color = textPrimary(darkMode))
-            }
+
+            Icon(Icons.Default.WifiTethering, null, tint = PrimaryBlue)
+            Spacer(Modifier.width(6.dp))
+            Text("Dispositivos Disponibles",
+                fontWeight = FontWeight.Bold,
+                color = textPrimary(darkMode))
+
             Spacer(Modifier.weight(1f))
 
             FilledTonalButton(
@@ -427,46 +348,129 @@ fun BluetoothScreen(
                 )
             }
         }
+
+
+        // ===============================================================
+        // MONITOR SERIAL
+        // ===============================================================
+        Spacer(Modifier.height(18.dp))
+
+        Card(
+            Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(18.dp),
+            border = BorderStroke(1.dp, borderColor(darkMode)),
+            colors = CardDefaults.cardColors(
+                if (darkMode) Color(0xFF0F172A) else Color(0xFFE6FAFF)
+            )
+        ) {
+
+            Column(Modifier.padding(16.dp)) {
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Code, null, tint = PrimaryBlue)
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        "Monitor Serial",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 17.sp,
+                        color = textPrimary(darkMode)
+                    )
+                    Spacer(Modifier.weight(1f))
+
+                    Box(
+                        Modifier
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(
+                                if (connectedAddress != null)
+                                    Color(0xFFBBF7D0)
+                                else
+                                    Color(0xFFFDECEC)
+                            )
+                            .padding(horizontal = 10.dp, vertical = 4.dp)
+                    ) {
+                        Text(
+                            if (connectedAddress != null) "Activo" else "Inactivo",
+                            fontSize = 12.sp,
+                            color = if (connectedAddress != null)
+                                Color(0xFF15803D)
+                            else
+                                Color(0xFFB91C1C)
+                        )
+                    }
+                }
+
+                Spacer(Modifier.height(14.dp))
+
+                Card(
+                    Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = CardDefaults.cardColors(
+                        if (darkMode) Color(0xFF1F2937) else Color.White
+                    ),
+                    border = BorderStroke(1.dp, borderColor(darkMode))
+                ) {
+                    Column(Modifier.padding(12.dp)) {
+
+                        Text(
+                            if (connectedAddress != null)
+                                "Esperando datos del Arduino..."
+                            else
+                                "$ No hay dispositivos conectados\n$ Conecta un Arduino para ver datos...",
+                            fontSize = 13.sp,
+                            color = textSecondary(darkMode)
+                        )
+                    }
+                }
+            }
+        }
+
+
+        // ===============================================================
+        // CONSEJOS PARA CONECTAR
+        // ===============================================================
+
+        Spacer(Modifier.height(18.dp))
+
+        Card(
+            Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(18.dp),
+            border = BorderStroke(1.dp, borderColor(darkMode)),
+            colors = CardDefaults.cardColors(cardColor(darkMode))
+        ) {
+            Column(Modifier.padding(16.dp)) {
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Lightbulb, null, tint = Color(0xFFF59E0B))
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        "Consejos para conectar",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 17.sp,
+                        color = textPrimary(darkMode)
+                    )
+                }
+
+                Spacer(Modifier.height(12.dp))
+
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("• Asegúrate de que el dispositivo esté encendido y visible",
+                        color = textSecondary(darkMode),
+                        fontSize = 14.sp)
+                    Text("• Mantén los dispositivos a menos de 10 metros",
+                        color = textSecondary(darkMode),
+                        fontSize = 14.sp)
+                    Text("• El PIN por defecto suele ser 0000 o 1234",
+                        color = textSecondary(darkMode),
+                        fontSize = 14.sp)
+                }
+            }
+        }
     }
 }
 
-// ===============================================================
-// CHIP DE LED — DINÁMICO
-// ===============================================================
-
-@Composable
-private fun LedChip(label: String, selected: Boolean, darkMode: Boolean) {
-
-    val bg = if (selected)
-        if (darkMode) Color(0xFF450A0A) else Color(0xFFFDECEC)
-    else
-        if (darkMode) Color(0xFF111827) else Color(0xFFF8FAFC)
-
-    val borderColor = if (selected) Color(0xFFFCA5A5) else borderColor(darkMode)
-    val dot = if (selected) Color(0xFFEF4444) else Color(0xFFD1D5DB)
-
-    Column(
-        Modifier
-            .width(74.dp)
-            .clip(RoundedCornerShape(12.dp))
-            .background(bg)
-            .border(BorderStroke(1.dp, borderColor), RoundedCornerShape(12.dp))
-            .padding(vertical = 8.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Box(
-            Modifier
-                .size(10.dp)
-                .clip(CircleShape)
-                .background(dot)
-        )
-        Spacer(Modifier.height(6.dp))
-        Text(label, fontSize = 11.sp, color = textPrimary(darkMode))
-    }
-}
 
 // ===============================================================
-// DEVICE CARD — DINÁMICA
+// DEVICE CARD — RESPONSIVE Y COMPLETA
 // ===============================================================
 
 @Composable
@@ -478,10 +482,9 @@ fun DeviceCardPro(
     onConnect: () -> Unit,
     onDisconnect: () -> Unit
 ) {
+
     Card(
-        Modifier
-            .fillMaxWidth()
-            .animateContentSize(),
+        Modifier.fillMaxWidth().animateContentSize(),
         shape = RoundedCornerShape(18.dp),
         border = BorderStroke(
             1.dp,
@@ -489,22 +492,23 @@ fun DeviceCardPro(
         ),
         colors = CardDefaults.cardColors(cardColor(darkMode))
     ) {
-        Column(
-            Modifier.padding(14.dp)
-        ) {
+
+        Column(Modifier.padding(14.dp)) {
+
             Row(verticalAlignment = Alignment.CenterVertically) {
+
                 Icon(Icons.Default.DeveloperBoard, null, tint = PrimaryBlue)
                 Spacer(Modifier.width(12.dp))
+
                 Column(Modifier.weight(1f)) {
                     Text(dev.name, fontWeight = FontWeight.Bold, color = textPrimary(darkMode))
                     Text(dev.address, color = textSecondary(darkMode), fontSize = 12.sp)
                 }
+
                 if (isConnecting) {
                     CircularProgressIndicator(Modifier.size(24.dp))
                 } else {
-                    Button(
-                        onClick = if (isConnected) onDisconnect else onConnect
-                    ) {
+                    Button(onClick = if (isConnected) onDisconnect else onConnect) {
                         Text(
                             if (isConnected) "Desconectar" else "Conectar",
                             color = Color.White

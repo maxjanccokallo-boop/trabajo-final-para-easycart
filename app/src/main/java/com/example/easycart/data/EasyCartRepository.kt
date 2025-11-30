@@ -28,16 +28,12 @@ class EasyCartRepository(
     fun currentUser(): FirebaseUser? = auth.currentUser
 
     // ===========================================================
-    // LOGIN / REGISTER FAKE (mantengo tu lógica)
+    // LOGIN / REGISTER
     // ===========================================================
     fun login(email: String, password: String, onResult: (AuthResult) -> Unit) {
         auth.signInWithEmailAndPassword(email, password)
-            .addOnSuccessListener {
-                onResult(AuthResult(isSuccess = true))
-            }
-            .addOnFailureListener { e ->
-                onResult(AuthResult(isSuccess = false, exceptionOrNull = { e }))
-            }
+            .addOnSuccessListener { onResult(AuthResult(isSuccess = true)) }
+            .addOnFailureListener { e -> onResult(AuthResult(isSuccess = false, exceptionOrNull = { e })) }
     }
 
     fun register(
@@ -48,17 +44,23 @@ class EasyCartRepository(
         onResult: (AuthResult) -> Unit
     ) {
         auth.createUserWithEmailAndPassword(email, password)
-            .addOnSuccessListener {
-                onResult(AuthResult(isSuccess = true))
-            }
-            .addOnFailureListener { e ->
-                onResult(AuthResult(isSuccess = false, exceptionOrNull = { e }))
-            }
+            .addOnSuccessListener { onResult(AuthResult(isSuccess = true)) }
+            .addOnFailureListener { e -> onResult(AuthResult(isSuccess = false, exceptionOrNull = { e })) }
     }
 
 
     // ===========================================================
-    // ⭐ AÑADIR PRODUCTO AL CARRITO (OFERTAS COMPLETAS)
+    // ⭐ ESCUCHAR CAMBIOS DE AUTENTICACIÓN
+    // ===========================================================
+    fun onAuthStateChanged(listener: (FirebaseUser?) -> Unit) {
+        auth.addAuthStateListener { firebaseAuth ->
+            listener(firebaseAuth.currentUser)
+        }
+    }
+
+
+    // ===========================================================
+    // ⭐ AÑADIR PRODUCTO AL CARRITO
     // ===========================================================
     suspend fun addOrIncrementCartItem(uid: String, product: Product) {
 
@@ -84,9 +86,6 @@ class EasyCartRepository(
                         (((product.price - offerPrice) / product.price) * 100).toInt()
                     else null
 
-                // ----------------------------
-                // SI YA EXISTE → sumar cantidad
-                // ----------------------------
                 if (snap.exists()) {
 
                     val currentQty = snap.getLong("quantity")?.toInt() ?: 0
@@ -110,9 +109,6 @@ class EasyCartRepository(
                     return@runTransaction
                 }
 
-                // ----------------------------
-                // SI ES NUEVO → guardar info completa
-                // ----------------------------
                 val item = CartItem(
                     id = productId,
                     productId = productId,
@@ -181,7 +177,7 @@ class EasyCartRepository(
 
 
     // ===========================================================
-    // ⭐ DECREMENTAR CANTIDAD (respeta oferta)
+    // DECREMENTAR
     // ===========================================================
     suspend fun decrementCartItem(uid: String, productId: String) {
 
@@ -226,7 +222,7 @@ class EasyCartRepository(
 
 
     // ===========================================================
-    // ⭐ ELIMINAR TODO / LIMPIAR CARRITO
+    // CLEAR CART
     // ===========================================================
     suspend fun clearCart(uid: String) {
         try {
@@ -243,7 +239,7 @@ class EasyCartRepository(
 
 
     // ===========================================================
-    // ⭐ FINALIZAR COMPRA (STOCK + HISTORIAL)
+    // FINALIZAR COMPRA
     // ===========================================================
     suspend fun finalizePurchase(uid: String, cart: List<CartItem>): Boolean {
 
@@ -253,9 +249,6 @@ class EasyCartRepository(
 
             db.runTransaction { transaction ->
 
-                // ----------------------------
-                // 1. RESTAR STOCK
-                // ----------------------------
                 cart.forEach { item ->
 
                     val prodRef = db.collection("products").document(item.productId)
@@ -272,9 +265,6 @@ class EasyCartRepository(
                     }
                 }
 
-                // ----------------------------
-                // 2. GUARDAR COMPRA
-                // ----------------------------
                 val purchaseRef = db.collection("users")
                     .document(uid)
                     .collection("purchases")
@@ -297,7 +287,6 @@ class EasyCartRepository(
                 null
             }.await()
 
-            // Borrado fuera de la transacción
             clearCart(uid)
             true
 
@@ -346,7 +335,5 @@ class EasyCartRepository(
     }
 
 
-
-
-    fun listenOffers(): Flow<List<Offer>> = callbackFlow { awaitClose {} }
+    fun listenOffers(): Flow<List<Offer>> = callbackFlow { awaitClose{} }
 }

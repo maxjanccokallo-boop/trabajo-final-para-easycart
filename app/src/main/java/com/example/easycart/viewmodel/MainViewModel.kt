@@ -63,6 +63,15 @@ class MainViewModel(
         observeOffers()
         observeCart()
         loadPurchases()
+
+        // ⭐ AGREGADO: LISTENER DE CAMBIOS DE USUARIO
+        repository.onAuthStateChanged { firebaseUser ->
+            _uiState.update { it.copy(user = firebaseUser) }
+
+            if (firebaseUser != null) {
+                loadPurchases()
+            }
+        }
     }
 
     private fun enviarPermiso() {
@@ -208,5 +217,11 @@ class MainViewModel(
             stock = this.maxStock ?: 0,
             expiresAt = this.expiresAt
         )
+    }
+
+    // ⭐ AGREGADO: LLAMAR DESPUÉS DEL LOGIN
+    fun refreshUser() {
+        val newUser = repository.currentUser()
+        _uiState.update { it.copy(user = newUser) }
     }
 }
