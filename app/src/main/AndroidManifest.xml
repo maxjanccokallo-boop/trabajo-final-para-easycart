@@ -2,8 +2,13 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <!-- ===================================== -->
+    <!-- PERMISOS GENERALES                    -->
+    <!-- ===================================== -->
+
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <!-- Bluetooth clásicos -->
     <uses-permission android:name="android.permission.BLUETOOTH" />
     <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
 
@@ -18,18 +23,28 @@
 
     <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE" />
 
-    <!-- Cámara (si usas escaneo por cámara) -->
+    <!-- Cámara -->
     <uses-permission android:name="android.permission.CAMERA" />
 
-    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" tools:ignore="CoarseFineLocation" />
+    <!-- Location para BT -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"
+        tools:ignore="CoarseFineLocation"/>
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
 
+    <!-- ⚠️ Para leer y abrir PDFs -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="29" />
+
+    <!-- USB -->
     <uses-feature android:name="android.hardware.usb.host" />
-
     <uses-feature android:name="android.hardware.bluetooth" android:required="false" />
     <uses-feature android:name="android.hardware.bluetooth_le" android:required="false"/>
+
+    <!-- ===================================== -->
+    <!-- APPLICATION                            -->
+    <!-- ===================================== -->
 
     <application
         android:name=".EasyCartApp"
@@ -41,6 +56,24 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.EasyCart">
+
+        <!-- ===================================== -->
+        <!-- FILE PROVIDER PARA PDF (OBLIGATORIO)   -->
+        <!-- ===================================== -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.provider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+
+        <!-- ===================================== -->
+        <!-- MAIN ACTIVITY                         -->
+        <!-- ===================================== -->
 
         <activity
             android:name=".MainActivity"
@@ -59,7 +92,6 @@
             <meta-data
                 android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED"
                 android:resource="@xml/device_filter" />
-
         </activity>
 
     </application>

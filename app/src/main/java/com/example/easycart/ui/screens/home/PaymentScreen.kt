@@ -109,7 +109,8 @@ fun PaymentScreen(
 
                             lastPdfPath = pdf?.absolutePath ?: ""
 
-                            navController.navigate("payment_success?pdf=$lastPdfPath")
+                            // 🔥 CORRECCIÓN: enviar pdfPath en la ruta correcta
+                            navController.navigate("payment_success?pdfPath=$lastPdfPath")
                         }
                     }
                 },
