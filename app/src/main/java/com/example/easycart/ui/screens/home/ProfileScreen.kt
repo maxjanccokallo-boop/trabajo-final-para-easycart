@@ -30,173 +30,161 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-/* ===========================================================
-   ✅ PROFILE SCREEN PRO
-   - MISMA LÓGICA (uiState)
-   - DISEÑO UNIFICADO con tus colores/forma
-   - RESPONSIVE
-   - SIN ROMPER NADA
-=========================================================== */
+// ===========================================================
+// 🎨 PALETAS
+// ===========================================================
 
-// ================================
-// 🎨 PALETA / GRADIENTES (como tu home)
-// ================================
-private val ProfileHeaderGradient = Brush.horizontalGradient(
+private val ProfileHeaderGradientLight = Brush.horizontalGradient(
     listOf(Color(0xFF4A64F0), Color(0xFF8B5CF6))
 )
 
-private val ProfileScreenBg = Brush.verticalGradient(
+private val ProfileHeaderGradientDark = Brush.horizontalGradient(
+    listOf(Color(0xFF1A1A1A), Color(0xFF2A2A2A))
+)
+
+private val ProfileScreenBgLight = Brush.verticalGradient(
     listOf(Color(0xFFF7F6FB), Color(0xFFF1ECFF))
 )
 
-// Curvita decorativa de abajo (tipo tus imágenes)
-private val BottomWaveGradient = Brush.horizontalGradient(
-    listOf(
-        Color(0xFF8B5CF6).copy(alpha = 0.25f),
-        Color(0xFF4A64F0).copy(alpha = 0.25f)
-    )
+private val ProfileScreenBgDark = Brush.verticalGradient(
+    listOf(Color(0xFF0D0D0D), Color(0xFF1A1A1A))
 )
 
-/* ===========================================================
-   ⭐ PANTALLA PRINCIPAL
-=========================================================== */
+private val BottomWaveLight = Brush.horizontalGradient(
+    listOf(Color(0xFF8B5CF6).copy(alpha = 0.25f), Color(0xFF4A64F0).copy(alpha = 0.25f))
+)
+private val BottomWaveDark = Brush.horizontalGradient(
+    listOf(Color(0xFF333333), Color(0xFF222222))
+)
+
+// ===========================================================
+// ⭐ PANTALLA PRINCIPAL
+// ===========================================================
 @Composable
 fun ProfileScreen(
     viewModel: MainViewModel,
+    darkMode: Boolean,
     onLogout: () -> Unit
 ) {
+
     val uiState by viewModel.uiState.collectAsState()
     val user = uiState.user
 
-    // ---------------------------
-    // 📌 Datos reales desde tu uiState (SIN CAMBIAR LÓGICA)
-    // ---------------------------
     val purchasesCount = uiState.purchases.size
 
-    // items en Purchase es List<Map<String, Any>>
-    val productsBoughtFromPurchases = uiState.purchases.sumOf { it.items.size }
-    val productsBought =
-        if (productsBoughtFromPurchases > 0) productsBoughtFromPurchases
+    val boughtFromPurchases = uiState.purchases.sumOf { it.items.size }
+    val boughtFinal =
+        if (boughtFromPurchases > 0) boughtFromPurchases
         else uiState.cart.sumOf { it.quantity }
 
     val totalSpent = uiState.purchases.sumOf { it.total }
 
-    // ahorro total usando products (mismo criterio que ofertas)
-    val totalSavings = remember(uiState.products) {
-        uiState.products.sumOf { p ->
-            if (p.hasOffer && p.offerPrice != null && p.offerPrice < p.price)
-                (p.price - p.offerPrice)
-            else 0.0
-        }
+    val totalSavings = uiState.products.sumOf { p ->
+        if (p.hasOffer && p.offerPrice != null && p.offerPrice < p.price)
+            (p.price - p.offerPrice)
+        else 0.0
     }
 
-    // fecha real de creación (Firebase)
-    val memberSince = remember(user) {
-        user?.metadata?.creationTimestamp?.let(::formatDate) ?: "Sin fecha"
-    }
+    val memberSince = user?.metadata?.creationTimestamp?.let(::formatDate) ?: "Sin fecha"
 
-    // última sync mostrada (solo UI, no rompe nada)
-    val lastSyncText by remember {
-        mutableStateOf(formatDateTime(System.currentTimeMillis()))
-    }
+    val lastSyncText by remember { mutableStateOf(formatDateTime(System.currentTimeMillis())) }
 
-    // Responsive padding
-    val widthDp = LocalConfiguration.current.screenWidthDp
-    val horizontalPad = if (widthDp < 400) 12.dp else 16.dp
-    val contentMaxWidth = if (widthDp >= 1000) 760.dp else Dp.Unspecified
+    val width = LocalConfiguration.current.screenWidthDp
+    val pad = if (width < 400) 12.dp else 16.dp
+    val maxWidth = if (width >= 1000) 760.dp else Dp.Unspecified
+
+    val bgBrush = if (darkMode) ProfileScreenBgDark else ProfileScreenBgLight
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(ProfileScreenBg)
+            .background(bgBrush)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(bottom = 28.dp),
+                .padding(bottom = 26.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
 
-            // ✅ HEADER PRO
             ProfileHeaderCard(
                 email = user?.email ?: "Sin correo",
                 memberSince = memberSince,
                 purchasesCount = purchasesCount,
-                productsBought = productsBought,
+                productsBought = boughtFinal,
                 totalSpent = totalSpent,
                 totalSavings = totalSavings,
-                onSettingsClick = { /* navegas a settings si quieres */ }
+                darkMode = darkMode,
+                onSettingsClick = {}
             )
 
-            // ✅ CONTENEDOR CENTRAL RESPONSIVE
             Column(
                 modifier = Modifier
-                    .padding(horizontal = horizontalPad)
-                    .widthIn(max = contentMaxWidth),
+                    .padding(horizontal = pad)
+                    .widthIn(max = maxWidth),
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
 
-                // ✅ SINCRONIZACIÓN
                 SyncSectionCard(
                     usersCount = if (user != null) 1 else 0,
                     purchasesCount = purchasesCount,
                     productsCount = uiState.products.size,
                     btDevicesCount = 4,
                     lastSyncText = lastSyncText,
-                    onSyncArduino = { /* tu lógica sync */ },
-                    onExport = { /* tu lógica export */ }
+                    darkMode = darkMode,
+                    onSyncArduino = {},
+                    onExport = {}
                 )
 
-                // ✅ ESTADÍSTICAS
                 StatsSectionCard(
                     purchasesCount = purchasesCount,
-                    productsBought = productsBought,
+                    productsBought = boughtFinal,
                     totalSpent = totalSpent,
-                    totalSavings = totalSavings
+                    totalSavings = totalSavings,
+                    darkMode = darkMode
                 )
 
-                // ✅ HISTORIAL REAL
                 HistorySectionCard(
-                    purchases = uiState.purchases
+                    purchases = uiState.purchases,
+                    darkMode = darkMode
                 )
 
-                // ✅ CUENTA
                 AccountSectionCard(
                     accountType = "Correo Electrónico",
-                    uid = user?.uid ?: "N/A"
+                    uid = user?.uid ?: "N/A",
+                    darkMode = darkMode
                 )
 
-                // ✅ BOTÓN CERRAR SESIÓN
                 Button(
                     onClick = onLogout,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(52.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE53935)),
+                    modifier = Modifier.fillMaxWidth().height(52.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFFE53935),
+                        contentColor = Color.White
+                    ),
                     shape = RoundedCornerShape(14.dp)
                 ) {
-                    Icon(Icons.Default.Logout, contentDescription = null, tint = Color.White)
+                    Icon(Icons.Default.Logout, null, tint = Color.White)
                     Spacer(Modifier.width(8.dp))
-                    Text("Cerrar Sesión", color = Color.White, fontWeight = FontWeight.Bold)
+                    Text("Cerrar Sesión")
                 }
 
-                // ✅ INFO SMARTCART
                 InfoSectionCard(
                     title = "Sistema SmartCart",
-                    text = "Tu cuenta está sincronizada con el sistema del carrito inteligente. Escaneos y compras seguras."
+                    text = "Tu cuenta está sincronizada con el sistema del carrito inteligente.",
+                    darkMode = darkMode
                 )
             }
 
-            // ✅ FORMA DECORATIVA ABAJO (como tu imagen)
-            BottomWave()
+            BottomWave(darkMode)
         }
     }
 }
 
-/* ===========================================================
-   ✅ HEADER PRO (mismo estilo que inicio)
-=========================================================== */
+// ===========================================================
+// HEADER PRO
+// ===========================================================
 @Composable
 private fun ProfileHeaderCard(
     email: String,
@@ -205,8 +193,14 @@ private fun ProfileHeaderCard(
     productsBought: Int,
     totalSpent: Double,
     totalSavings: Double,
+    darkMode: Boolean,
     onSettingsClick: () -> Unit
 ) {
+
+    val gradient = if (darkMode) ProfileHeaderGradientDark else ProfileHeaderGradientLight
+    val pillBg = if (darkMode) Color.White.copy(alpha = 0.08f) else Color.White.copy(alpha = 0.12f)
+    val iconTint = if (darkMode) Color(0xFFD0BFFF) else Color(0xFF7B61FF)
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -215,9 +209,9 @@ private fun ProfileHeaderCard(
         colors = CardDefaults.cardColors(containerColor = Color.Transparent)
     ) {
         Box(
-            modifier = Modifier
-                .background(ProfileHeaderGradient)
-                .padding(horizontal = 18.dp, vertical = 18.dp)
+            Modifier
+                .background(gradient)
+                .padding(18.dp)
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
 
@@ -230,18 +224,15 @@ private fun ProfileHeaderCard(
                             style = MaterialTheme.typography.headlineSmall,
                             fontWeight = FontWeight.Bold
                         )
+
                         Spacer(Modifier.height(4.dp))
+
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                Icons.Default.CalendarMonth,
-                                null,
-                                tint = Color.White.copy(alpha = 0.9f),
-                                modifier = Modifier.size(16.dp)
-                            )
+                            Icon(Icons.Default.CalendarMonth, null, tint = Color.White.copy(0.9f), modifier = Modifier.size(16.dp))
                             Spacer(Modifier.width(6.dp))
                             Text(
                                 "Miembro desde $memberSince",
-                                color = Color.White.copy(alpha = 0.9f),
+                                color = Color.White.copy(0.9f),
                                 style = MaterialTheme.typography.bodySmall
                             )
                         }
@@ -260,28 +251,20 @@ private fun ProfileHeaderCard(
 
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.12f)),
+                    colors = CardDefaults.cardColors(containerColor = pillBg),
                     shape = RoundedCornerShape(20.dp)
                 ) {
                     Column(
-                        modifier = Modifier.padding(16.dp),
+                        Modifier.padding(16.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
 
                         Box(
-                            modifier = Modifier
-                                .size(88.dp)
-                                .clip(CircleShape)
-                                .background(Color.White),
+                            Modifier.size(88.dp).clip(CircleShape).background(Color.White),
                             contentAlignment = Alignment.Center
                         ) {
-                            Icon(
-                                Icons.Default.Person,
-                                null,
-                                tint = Color(0xFF7B61FF),
-                                modifier = Modifier.size(44.dp)
-                            )
+                            Icon(Icons.Default.Person, null, tint = iconTint, modifier = Modifier.size(44.dp))
                         }
 
                         Text(
@@ -293,10 +276,10 @@ private fun ProfileHeaderCard(
                             overflow = TextOverflow.Ellipsis
                         )
 
-                        val widthDp = LocalConfiguration.current.screenWidthDp
-                        val isCompact = widthDp < 360
+                        val width = LocalConfiguration.current.screenWidthDp
+                        val compact = width < 360
 
-                        if (isCompact) {
+                        if (compact) {
                             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                 HeaderStatPill("Compras", purchasesCount.toString(), Icons.Default.ShoppingCart)
                                 HeaderStatPill("Productos", productsBought.toString(), Icons.Default.Widgets)
@@ -308,30 +291,10 @@ private fun ProfileHeaderCard(
                                 Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
-                                HeaderStatPill(
-                                    "Compras",
-                                    purchasesCount.toString(),
-                                    Icons.Default.ShoppingCart,
-                                    modifier = Modifier.weight(1f)
-                                )
-                                HeaderStatPill(
-                                    "Productos",
-                                    productsBought.toString(),
-                                    Icons.Default.Widgets,
-                                    modifier = Modifier.weight(1f)
-                                )
-                                HeaderStatPill(
-                                    "Gastado",
-                                    "S/ ${"%.2f".format(totalSpent)}",
-                                    Icons.Default.ShoppingBag,
-                                    modifier = Modifier.weight(1f)
-                                )
-                                HeaderStatPill(
-                                    "Ahorro",
-                                    "S/ ${"%.2f".format(totalSavings)}",
-                                    Icons.Default.LocalOffer,
-                                    modifier = Modifier.weight(1f)
-                                )
+                                HeaderStatPill("Compras", purchasesCount.toString(), Icons.Default.ShoppingCart, Modifier.weight(1f))
+                                HeaderStatPill("Productos", productsBought.toString(), Icons.Default.Widgets, Modifier.weight(1f))
+                                HeaderStatPill("Gastado", "S/ ${"%.2f".format(totalSpent)}", Icons.Default.ShoppingBag, Modifier.weight(1f))
+                                HeaderStatPill("Ahorro", "S/ ${"%.2f".format(totalSavings)}", Icons.Default.LocalOffer, Modifier.weight(1f))
                             }
                         }
                     }
@@ -355,7 +318,7 @@ private fun HeaderStatPill(
         elevation = CardDefaults.cardElevation(0.dp)
     ) {
         Column(
-            modifier = Modifier.fillMaxSize().padding(12.dp),
+            Modifier.fillMaxSize().padding(12.dp),
             verticalArrangement = Arrangement.Center
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -376,9 +339,10 @@ private fun HeaderStatPill(
     }
 }
 
-/* ===========================================================
-   ✅ SINCRONIZACIÓN
-=========================================================== */
+
+// ===========================================================
+// SINCRONIZACIÓN
+// ===========================================================
 @Composable
 private fun SyncSectionCard(
     usersCount: Int,
@@ -386,43 +350,50 @@ private fun SyncSectionCard(
     productsCount: Int,
     btDevicesCount: Int,
     lastSyncText: String,
+    darkMode: Boolean,
     onSyncArduino: () -> Unit,
     onExport: () -> Unit
 ) {
+
+    val surface = if (darkMode) Color(0xFF1C1C1C) else Color.White
+    val chip =
+        if (darkMode) Color(0xFF262626)
+        else Color(0xFFF7F7FF)
+
     Card(
         modifier = Modifier.fillMaxWidth().shadow(6.dp, RoundedCornerShape(18.dp)),
         shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White)
+        colors = CardDefaults.cardColors(containerColor = surface)
     ) {
         Column(Modifier.padding(16.dp)) {
 
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.Refresh, null, tint = Color(0xFF7B61FF))
                 Spacer(Modifier.width(8.dp))
-                Text("Sincronización de Datos", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                Text("Sincronización de Datos", fontWeight = FontWeight.Bold)
             }
 
             Spacer(Modifier.height(12.dp))
 
-            val widthDp = LocalConfiguration.current.screenWidthDp
-            val compact = widthDp < 360
+            val w = LocalConfiguration.current.screenWidthDp
+            val compact = w < 360
 
             if (compact) {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    SyncBoxPro("Usuarios", usersCount.toString(), Color(0xFFE9FFF1))
-                    SyncBoxPro("Boletas", purchasesCount.toString(), Color(0xFFEAF2FF))
-                    SyncBoxPro("Productos", productsCount.toString(), Color(0xFFF4ECFF))
-                    SyncBoxPro("Dispositivos BT", btDevicesCount.toString(), Color(0xFFFFF6E5))
+                    SyncBoxPro("Usuarios", usersCount.toString(), chip)
+                    SyncBoxPro("Boletas", purchasesCount.toString(), chip)
+                    SyncBoxPro("Productos", productsCount.toString(), chip)
+                    SyncBoxPro("Dispositivos BT", btDevicesCount.toString(), chip)
                 }
             } else {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    SyncBoxPro("Usuarios", usersCount.toString(), Color(0xFFE9FFF1), modifier = Modifier.weight(1f))
-                    SyncBoxPro("Boletas", purchasesCount.toString(), Color(0xFFEAF2FF), modifier = Modifier.weight(1f))
+                    SyncBoxPro("Usuarios", usersCount.toString(), chip, Modifier.weight(1f))
+                    SyncBoxPro("Boletas", purchasesCount.toString(), chip, Modifier.weight(1f))
                 }
                 Spacer(Modifier.height(12.dp))
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    SyncBoxPro("Productos", productsCount.toString(), Color(0xFFF4ECFF), modifier = Modifier.weight(1f))
-                    SyncBoxPro("Dispositivos BT", btDevicesCount.toString(), Color(0xFFFFF6E5), modifier = Modifier.weight(1f))
+                    SyncBoxPro("Productos", productsCount.toString(), chip, Modifier.weight(1f))
+                    SyncBoxPro("Dispositivos BT", btDevicesCount.toString(), chip, Modifier.weight(1f))
                 }
             }
 
@@ -455,21 +426,6 @@ private fun SyncSectionCard(
                 Spacer(Modifier.width(8.dp))
                 Text("Exportar Datos", color = Color.White)
             }
-
-            Spacer(Modifier.height(12.dp))
-
-            Card(
-                Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF9E7)),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Text(
-                    "Los datos se guardan localmente. Para producción usa Firebase, Supabase o MongoDB.",
-                    Modifier.padding(10.dp),
-                    color = Color(0xFF8A6D3B),
-                    style = MaterialTheme.typography.bodySmall
-                )
-            }
         }
     }
 }
@@ -490,27 +446,32 @@ private fun SyncBoxPro(
             Modifier.fillMaxSize().padding(12.dp),
             verticalArrangement = Arrangement.Center
         ) {
-            Text(title, style = MaterialTheme.typography.bodySmall, color = Color.DarkGray)
+            Text(title, color = Color.DarkGray)
             Spacer(Modifier.height(6.dp))
-            Text(value, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+            Text(value, fontWeight = FontWeight.Bold)
         }
     }
 }
 
-/* ===========================================================
-   ✅ ESTADÍSTICAS
-=========================================================== */
+
+// ===========================================================
+// ESTADÍSTICAS
+// ===========================================================
 @Composable
 private fun StatsSectionCard(
     purchasesCount: Int,
     productsBought: Int,
     totalSpent: Double,
-    totalSavings: Double
+    totalSavings: Double,
+    darkMode: Boolean
 ) {
+
+    val surface = if (darkMode) Color(0xFF1C1C1C) else Color.White
+
     Card(
         modifier = Modifier.fillMaxWidth().shadow(6.dp, RoundedCornerShape(18.dp)),
         shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White)
+        colors = CardDefaults.cardColors(containerColor = surface)
     ) {
         Column(Modifier.padding(16.dp)) {
 
@@ -541,17 +502,24 @@ private fun StatRowPro(label: String, value: String) {
     }
 }
 
-/* ===========================================================
-   ✅ HISTORIAL
-=========================================================== */
+
+// ===========================================================
+// HISTORIAL
+// ===========================================================
 @Composable
 private fun HistorySectionCard(
-    purchases: List<Purchase>
+    purchases: List<Purchase>,
+    darkMode: Boolean
 ) {
+
+    val surface = if (darkMode) Color(0xFF1C1C1C) else Color.White
+    val oddBg = if (darkMode) Color(0xFF222222) else Color(0xFFF7F7FF)
+    val evenBg = if (darkMode) Color(0xFF1A1A1A) else Color(0xFFFFFFFF)
+
     Card(
         modifier = Modifier.fillMaxWidth().shadow(6.dp, RoundedCornerShape(18.dp)),
         shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White)
+        colors = CardDefaults.cardColors(containerColor = surface)
     ) {
         Column(
             Modifier.padding(16.dp).animateContentSize(tween(250))
@@ -566,20 +534,17 @@ private fun HistorySectionCard(
             Spacer(Modifier.height(12.dp))
 
             if (purchases.isEmpty()) {
-                Box(
-                    Modifier.fillMaxWidth().height(110.dp),
-                    contentAlignment = Alignment.Center
-                ) {
+                Box(Modifier.fillMaxWidth().height(110.dp), contentAlignment = Alignment.Center) {
                     Text("🛍  Aún no has realizado compras", color = Color.Gray)
                 }
             } else {
-                purchases.forEachIndexed { idx, p ->
+                purchases.forEachIndexed { index, purchase ->
                     val bg by animateColorAsState(
-                        targetValue = if (idx % 2 == 0) Color(0xFFF7F7FF) else Color(0xFFFFFFFF),
-                        animationSpec = tween(300),
-                        label = "historyBG"
+                        if (index % 2 == 0) oddBg else evenBg,
+                        tween(300),
+                        label = ""
                     )
-                    HistoryItemCard(p, bg)
+                    HistoryItemCard(purchase, bg, darkMode)
                     Spacer(Modifier.height(8.dp))
                 }
             }
@@ -590,10 +555,13 @@ private fun HistorySectionCard(
 @Composable
 private fun HistoryItemCard(
     purchase: Purchase,
-    background: Color
+    background: Color,
+    darkMode: Boolean
 ) {
     val itemsCount = purchase.items.size
     val total = purchase.total
+
+    val iconBg = if (darkMode) Color(0xFF2B2730) else Color(0xFFF3F0FF)
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -601,13 +569,12 @@ private fun HistoryItemCard(
         colors = CardDefaults.cardColors(containerColor = background)
     ) {
         Row(
-            modifier = Modifier.padding(12.dp),
+            Modifier.padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+
             Box(
-                modifier = Modifier.size(42.dp)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(Color(0xFFF3F0FF)),
+                Modifier.size(42.dp).clip(RoundedCornerShape(10.dp)).background(iconBg),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(Icons.Default.ShoppingCartCheckout, null, tint = Color(0xFF7B61FF))
@@ -618,33 +585,37 @@ private fun HistoryItemCard(
             Column(Modifier.weight(1f)) {
                 Text("Compra de S/ ${"%.2f".format(total)}", fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(2.dp))
-                Text(formatDateTime(purchase.timestamp), color = Color.Gray, style = MaterialTheme.typography.bodySmall)
+                Text(formatDateTime(purchase.timestamp), color = Color.Gray)
             }
 
             Column(horizontalAlignment = Alignment.End) {
-                Text("$itemsCount items", color = Color.Gray, style = MaterialTheme.typography.bodySmall)
-                Spacer(Modifier.height(2.dp))
+                Text("$itemsCount items", color = Color.Gray)
                 val avg = if (itemsCount > 0) total / itemsCount else 0.0
-                Text("≈ S/ ${"%.2f".format(avg)} c/u", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.labelSmall)
+                Text("≈ S/ ${"%.2f".format(avg)} c/u", fontWeight = FontWeight.SemiBold)
             }
         }
     }
 }
 
-/* ===========================================================
-   ✅ CUENTA
-=========================================================== */
+
+// ===========================================================
+// CUENTA
+// ===========================================================
 @Composable
 private fun AccountSectionCard(
     accountType: String,
-    uid: String
+    uid: String,
+    darkMode: Boolean
 ) {
+    val surface = if (darkMode) Color(0xFF1C1C1C) else Color.White
+
     Card(
         modifier = Modifier.fillMaxWidth().shadow(6.dp, RoundedCornerShape(18.dp)),
         shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White)
+        colors = CardDefaults.cardColors(containerColor = surface)
     ) {
         Column(Modifier.padding(16.dp)) {
+
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.Key, null, tint = Color(0xFF7B61FF))
                 Spacer(Modifier.width(8.dp))
@@ -652,28 +623,32 @@ private fun AccountSectionCard(
             }
 
             Spacer(Modifier.height(10.dp))
-            Text("Tipo de cuenta", color = Color.Gray, style = MaterialTheme.typography.bodySmall)
+            Text("Tipo de cuenta", color = Color.Gray)
             Text(accountType, fontWeight = FontWeight.Bold)
 
             Spacer(Modifier.height(12.dp))
-            Text("ID de Usuario", color = Color.Gray, style = MaterialTheme.typography.bodySmall)
+            Text("ID de Usuario", color = Color.Gray)
             Text(uid, fontWeight = FontWeight.Bold)
         }
     }
 }
 
-/* ===========================================================
-   ✅ INFO
-=========================================================== */
+
+// ===========================================================
+// INFO
+// ===========================================================
 @Composable
 private fun InfoSectionCard(
     title: String,
-    text: String
+    text: String,
+    darkMode: Boolean
 ) {
+    val surface = if (darkMode) Color(0xFF1C1C1C) else Color.White
+
     Card(
         modifier = Modifier.fillMaxWidth().shadow(5.dp, RoundedCornerShape(18.dp)),
         shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White)
+        colors = CardDefaults.cardColors(containerColor = surface)
     ) {
         Column(Modifier.padding(16.dp)) {
             Text(title, fontWeight = FontWeight.Bold)
@@ -683,20 +658,25 @@ private fun InfoSectionCard(
     }
 }
 
-/* ===========================================================
-   ✅ DECORACIÓN ABAJO
-=========================================================== */
+
+// ===========================================================
+// DECORACIÓN
+// ===========================================================
 @Composable
-private fun BottomWave() {
+private fun BottomWave(darkMode: Boolean) {
+
+    val gradient = if (darkMode) BottomWaveDark else BottomWaveLight
+
     Spacer(Modifier.height(8.dp))
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .height(90.dp)
-            .background(BottomWaveGradient, RoundedCornerShape(topStart = 50.dp, topEnd = 50.dp))
+            .background(gradient, RoundedCornerShape(topStart = 50.dp, topEnd = 50.dp))
     ) {
         Row(
-            modifier = Modifier.fillMaxSize().padding(horizontal = 26.dp),
+            Modifier.fillMaxSize().padding(horizontal = 26.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
@@ -709,14 +689,13 @@ private fun BottomWave() {
 
 @Composable
 private fun Bubble(color: Color, size: Dp) {
-    Box(
-        modifier = Modifier.size(size).clip(CircleShape).background(color)
-    )
+    Box(Modifier.size(size).clip(CircleShape).background(color))
 }
 
-/* ===========================================================
-   ✅ Helpers fecha
-=========================================================== */
+
+// ===========================================================
+// HELPERS
+// ===========================================================
 private fun formatDate(timestamp: Long): String {
     val sdf = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
     return sdf.format(Date(timestamp))

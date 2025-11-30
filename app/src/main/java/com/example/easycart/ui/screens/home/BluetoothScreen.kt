@@ -8,8 +8,7 @@ import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.animateContentSize
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
+import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -36,19 +35,25 @@ import androidx.compose.foundation.BorderStroke
 import androidx.lifecycle.viewmodel.compose.viewModel
 
 // ===============================================================
-// 🎨 COLORES Y ESTILOS
+// 🎨 COLORES DINÁMICOS
 // ===============================================================
 
-private val BlueGradient = Brush.horizontalGradient(
-    listOf(Color(0xFF0EA5E9), Color(0xFF3B82F6))
-)
+private fun bgColor(dark: Boolean) = if (dark)
+    Brush.verticalGradient(listOf(Color(0xFF0F172A), Color(0xFF1E293B)))
+else
+    Brush.verticalGradient(listOf(Color(0xFFF7F6FB), Color(0xFFF1ECFF)))
 
-private val ScreenBg = Brush.verticalGradient(
-    listOf(Color(0xFFF7F6FB), Color(0xFFF1ECFF))
-)
+private fun cardColor(dark: Boolean) = if (dark) Color(0xFF1F2937) else Color.White
+private fun borderColor(dark: Boolean) = if (dark) Color(0xFF374151) else Color(0xFFE5E7EB)
 
-private val CardBg = Color.White
-private val BorderGray = Color(0xFFE5E7EB)
+private fun textPrimary(dark: Boolean) = if (dark) Color.White else Color(0xFF111827)
+private fun textSecondary(dark: Boolean) = if (dark) Color(0xFFCBD5E1) else Color.Gray
+
+private fun headerGradient(dark: Boolean) = if (dark)
+    Brush.horizontalGradient(listOf(Color(0xFF1E3A8A), Color(0xFF3B82F6)))
+else
+    Brush.horizontalGradient(listOf(Color(0xFF0EA5E9), Color(0xFF3B82F6)))
+
 private val PrimaryBlue = Color(0xFF2563EB)
 
 // ===============================================================
@@ -56,12 +61,14 @@ private val PrimaryBlue = Color(0xFF2563EB)
 // ===============================================================
 
 @Composable
-fun BluetoothScreen(mainViewModel: MainViewModel) {
+fun BluetoothScreen(
+    mainViewModel: MainViewModel,
+    darkMode: Boolean   // <-- ADDED
+) {
 
     val vm: BluetoothViewModel = viewModel()
 
     LaunchedEffect(Unit) {
-        // Obtener estado de conexión del servicio global
         vm.refreshState()
     }
 
@@ -81,7 +88,7 @@ fun BluetoothScreen(mainViewModel: MainViewModel) {
 
     var bluetoothEnabled by remember { mutableStateOf(adapter?.isEnabled == true) }
 
-    // Activar BT
+    // ACTIVAR BT
     val enableBtLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) {
@@ -116,12 +123,12 @@ fun BluetoothScreen(mainViewModel: MainViewModel) {
 
     if (!permissionsGranted) {
         Box(Modifier.fillMaxSize(), Alignment.Center) {
-            Text("Solicitando permisos…")
+            Text("Solicitando permisos…", color = textPrimary(darkMode))
         }
         return
     }
 
-    // LISTA DE DISPOSITIVOS
+    // DISPOSITIVOS
     var devices by remember { mutableStateOf(emptyList<BtDeviceUi>()) }
 
     fun loadBonded() {
@@ -140,10 +147,10 @@ fun BluetoothScreen(mainViewModel: MainViewModel) {
         if (bluetoothEnabled) loadBonded()
     }
 
-    // ESTADO DE CONEXIÓN LOCAL
     var connectedAddress by remember { mutableStateOf<String?>(null) }
     var connectedName by remember { mutableStateOf<String?>(null) }
     var isConnecting by remember { mutableStateOf(false) }
+
 
     // ===============================================================
     // UI
@@ -152,7 +159,7 @@ fun BluetoothScreen(mainViewModel: MainViewModel) {
     Column(
         Modifier
             .fillMaxSize()
-            .background(ScreenBg)
+            .background(bgColor(darkMode))
             .padding(16.dp)
     ) {
 
@@ -164,7 +171,7 @@ fun BluetoothScreen(mainViewModel: MainViewModel) {
         ) {
             Box(
                 Modifier
-                    .background(BlueGradient)
+                    .background(headerGradient(darkMode))
                     .padding(18.dp)
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -181,29 +188,30 @@ fun BluetoothScreen(mainViewModel: MainViewModel) {
                     Spacer(Modifier.width(12.dp))
 
                     Column {
-                        Text("Bluetooth", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                        Text("Conexión Arduino", fontSize = 14.sp, color = Color.White.copy(0.9f))
+                        Text(
+                            "Bluetooth",
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                        Text(
+                            "Conexión Arduino",
+                            fontSize = 14.sp,
+                            color = Color.White.copy(0.9f)
+                        )
                     }
 
                     Spacer(Modifier.weight(1f))
-
-                    IconButton(onClick = {}) {
-                        Box(
-                            Modifier
-                                .size(40.dp)
-                                .background(Color.White.copy(0.2f), CircleShape),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(Icons.Default.Settings, null, tint = Color.White)
-                        }
-                    }
                 }
 
                 Row(
                     Modifier.align(Alignment.BottomEnd),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(if (bluetoothEnabled) "Activado" else "Desactivado", color = Color.White)
+                    Text(
+                        if (bluetoothEnabled) "Activado" else "Desactivado",
+                        color = Color.White
+                    )
                     Spacer(Modifier.width(8.dp))
                     Switch(
                         checked = bluetoothEnabled,
@@ -230,11 +238,17 @@ fun BluetoothScreen(mainViewModel: MainViewModel) {
 
         Spacer(Modifier.height(14.dp))
 
+
         // ESTADO DE CONEXIÓN
         Card(
             Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(18.dp),
-            colors = CardDefaults.cardColors(Color(0xFF1E7CF0).copy(alpha = 0.12f))
+            colors = CardDefaults.cardColors(
+                if (darkMode)
+                    Color(0xFF1D4ED8).copy(alpha = 0.18f)
+                else
+                    Color(0xFF1E7CF0).copy(alpha = 0.12f)
+            )
         ) {
             Row(
                 Modifier.padding(14.dp),
@@ -249,7 +263,8 @@ fun BluetoothScreen(mainViewModel: MainViewModel) {
                 ) {
                     Icon(
                         if (connectedAddress == null) Icons.Default.Close else Icons.Default.Check,
-                        null, tint = Color.White
+                        null,
+                        tint = Color.White
                     )
                 }
 
@@ -258,9 +273,14 @@ fun BluetoothScreen(mainViewModel: MainViewModel) {
                 Column(Modifier.weight(1f)) {
                     Text(
                         if (connectedAddress == null) "Desconectado" else "Conectado",
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        color = textPrimary(darkMode)
                     )
-                    Text(connectedName ?: "Sin conexión activa", fontSize = 12.sp, color = Color.Gray)
+                    Text(
+                        connectedName ?: "Sin conexión activa",
+                        fontSize = 12.sp,
+                        color = textSecondary(darkMode)
+                    )
                 }
 
                 if (connectedAddress != null) {
@@ -277,18 +297,19 @@ fun BluetoothScreen(mainViewModel: MainViewModel) {
 
         Spacer(Modifier.height(14.dp))
 
+
         // ESTADO DEL SENSOR
         Card(
             Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(18.dp),
-            colors = CardDefaults.cardColors(CardBg)
+            colors = CardDefaults.cardColors(cardColor(darkMode))
         ) {
             Column(Modifier.padding(14.dp)) {
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.Lightbulb, null, tint = PrimaryBlue)
                     Spacer(Modifier.width(8.dp))
-                    Text("Estado del Sensor", fontWeight = FontWeight.Bold)
+                    Text("Estado del Sensor", fontWeight = FontWeight.Bold, color = textPrimary(darkMode))
                 }
 
                 Spacer(Modifier.height(12.dp))
@@ -296,8 +317,10 @@ fun BluetoothScreen(mainViewModel: MainViewModel) {
                 Card(
                     Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(14.dp),
-                    colors = CardDefaults.cardColors(Color(0xFFF8FAFC)),
-                    border = BorderStroke(1.dp, BorderGray)
+                    colors = CardDefaults.cardColors(
+                        if (darkMode) Color(0xFF0F172A) else Color(0xFFF8FAFC)
+                    ),
+                    border = BorderStroke(1.dp, borderColor(darkMode))
                 ) {
                     Column(Modifier.padding(14.dp)) {
 
@@ -314,14 +337,15 @@ fun BluetoothScreen(mainViewModel: MainViewModel) {
                             Spacer(Modifier.width(12.dp))
 
                             Column {
-                                Text("LED", fontWeight = FontWeight.Bold)
+                                Text("LED", fontWeight = FontWeight.Bold, color = textPrimary(darkMode))
                                 Text(
                                     when (ledState) {
                                         LedState.RED -> "Esperando"
                                         LedState.YELLOW -> "Alerta"
                                         LedState.GREEN -> "Agregado"
                                     },
-                                    color = Color.Gray, fontSize = 12.sp
+                                    color = textSecondary(darkMode),
+                                    fontSize = 12.sp
                                 )
                             }
                         }
@@ -332,10 +356,10 @@ fun BluetoothScreen(mainViewModel: MainViewModel) {
                             Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            LedChip("Espera", ledState == LedState.RED)
-                            LedChip("Agregado", ledState == LedState.GREEN)
-                            LedChip("Alerta", ledState == LedState.YELLOW)
-                            LedChip("Escaneo", false)
+                            LedChip("Espera", ledState == LedState.RED, darkMode)
+                            LedChip("Agregado", ledState == LedState.GREEN, darkMode)
+                            LedChip("Alerta", ledState == LedState.YELLOW, darkMode)
+                            LedChip("Escaneo", false, darkMode)
                         }
                     }
                 }
@@ -343,6 +367,7 @@ fun BluetoothScreen(mainViewModel: MainViewModel) {
         }
 
         Spacer(Modifier.height(16.dp))
+
 
         // DISPOSITIVOS DISPONIBLES
         Row(
@@ -352,7 +377,7 @@ fun BluetoothScreen(mainViewModel: MainViewModel) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.WifiTethering, null, tint = PrimaryBlue)
                 Spacer(Modifier.width(6.dp))
-                Text("Dispositivos Disponibles", fontWeight = FontWeight.Bold)
+                Text("Dispositivos Disponibles", fontWeight = FontWeight.Bold, color = textPrimary(darkMode))
             }
             Spacer(Modifier.weight(1f))
 
@@ -368,6 +393,7 @@ fun BluetoothScreen(mainViewModel: MainViewModel) {
 
         Spacer(Modifier.height(10.dp))
 
+
         LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             items(devices) { dev ->
 
@@ -377,6 +403,7 @@ fun BluetoothScreen(mainViewModel: MainViewModel) {
                     dev = dev,
                     isConnected = isConnected,
                     isConnecting = isConnecting && isConnected,
+                    darkMode = darkMode,
                     onConnect = {
                         if (!bluetoothEnabled) {
                             requestEnableBluetooth()
@@ -404,13 +431,18 @@ fun BluetoothScreen(mainViewModel: MainViewModel) {
 }
 
 // ===============================================================
-// CHIP DE LED
+// CHIP DE LED — DINÁMICO
 // ===============================================================
 
 @Composable
-private fun LedChip(label: String, selected: Boolean) {
-    val bg = if (selected) Color(0xFFFDECEC) else Color(0xFFF8FAFC)
-    val borderColor = if (selected) Color(0xFFFCA5A5) else BorderGray
+private fun LedChip(label: String, selected: Boolean, darkMode: Boolean) {
+
+    val bg = if (selected)
+        if (darkMode) Color(0xFF450A0A) else Color(0xFFFDECEC)
+    else
+        if (darkMode) Color(0xFF111827) else Color(0xFFF8FAFC)
+
+    val borderColor = if (selected) Color(0xFFFCA5A5) else borderColor(darkMode)
     val dot = if (selected) Color(0xFFEF4444) else Color(0xFFD1D5DB)
 
     Column(
@@ -429,18 +461,20 @@ private fun LedChip(label: String, selected: Boolean) {
                 .background(dot)
         )
         Spacer(Modifier.height(6.dp))
-        Text(label, fontSize = 11.sp)
+        Text(label, fontSize = 11.sp, color = textPrimary(darkMode))
     }
 }
 
 // ===============================================================
-// DEVICE CARD
+// DEVICE CARD — DINÁMICA
 // ===============================================================
+
 @Composable
 fun DeviceCardPro(
     dev: BtDeviceUi,
     isConnected: Boolean,
     isConnecting: Boolean,
+    darkMode: Boolean,
     onConnect: () -> Unit,
     onDisconnect: () -> Unit
 ) {
@@ -449,8 +483,11 @@ fun DeviceCardPro(
             .fillMaxWidth()
             .animateContentSize(),
         shape = RoundedCornerShape(18.dp),
-        border = BorderStroke(1.dp, if (isConnected) PrimaryBlue else BorderGray),
-        colors = CardDefaults.cardColors(CardBg)
+        border = BorderStroke(
+            1.dp,
+            if (isConnected) PrimaryBlue else borderColor(darkMode)
+        ),
+        colors = CardDefaults.cardColors(cardColor(darkMode))
     ) {
         Column(
             Modifier.padding(14.dp)
@@ -459,14 +496,19 @@ fun DeviceCardPro(
                 Icon(Icons.Default.DeveloperBoard, null, tint = PrimaryBlue)
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
-                    Text(dev.name, fontWeight = FontWeight.Bold)
-                    Text(dev.address, color = Color.Gray, fontSize = 12.sp)
+                    Text(dev.name, fontWeight = FontWeight.Bold, color = textPrimary(darkMode))
+                    Text(dev.address, color = textSecondary(darkMode), fontSize = 12.sp)
                 }
                 if (isConnecting) {
                     CircularProgressIndicator(Modifier.size(24.dp))
                 } else {
-                    Button(onClick = if (isConnected) onDisconnect else onConnect) {
-                        Text(if (isConnected) "Desconectar" else "Conectar")
+                    Button(
+                        onClick = if (isConnected) onDisconnect else onConnect
+                    ) {
+                        Text(
+                            if (isConnected) "Desconectar" else "Conectar",
+                            color = Color.White
+                        )
                     }
                 }
             }

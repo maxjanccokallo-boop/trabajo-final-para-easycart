@@ -32,18 +32,25 @@ import com.example.easycart.data.model.Product
 import com.example.easycart.viewmodel.MainViewModel
 
 // -------------------------------------------
-// 🎨 PALETA OSCURA
+// 🎨 PALETA OFICIAL
 // -------------------------------------------
+private val LightBg = Brush.verticalGradient(
+    listOf(Color(0xFFF7F6FB), Color(0xFFF1ECFF))
+)
 private val DarkBg = Brush.verticalGradient(
     listOf(Color(0xFF0F172A), Color(0xFF111827))
 )
 
-private val HeaderGradient = Brush.verticalGradient(
-    listOf(Color(0xFF1E2A40), Color(0xFF202A44))
-)
+private val DarkCard = Color(0xFF1E293B)
+private val LightCard = Color.White
+
+private val TextDark = Color.White
+private val TextLight = Color(0xFF111827)
+
+private val SubtitleDark = Color(0xFF94A3B8)
+private val SubtitleLight = Color(0xFF6B7280)
 
 private val PurpleAccent = Color(0xFF6366F1)
-private val NavyCard = Color(0xFF1E293B)
 
 // -------------------------------------------
 private val Categories = listOf("Todos", "Lácteos", "Bebidas", "Snacks", "Frutas", "Aseo")
@@ -57,11 +64,13 @@ private enum class SortMode(val label: String) {
 }
 
 // -------------------------------------------
-// 🌟 PANTALLA PRINCIPAL
+// 🌟 PRODUCTS SCREEN
 // -------------------------------------------
 @Composable
-fun ProductsScreen(viewModel: MainViewModel) {
-
+fun ProductsScreen(
+    viewModel: MainViewModel,
+    darkMode: Boolean      // <-- AÑADIDO
+) {
     val uiState by viewModel.uiState.collectAsState()
 
     var search by remember { mutableStateOf(TextFieldValue("")) }
@@ -114,22 +123,20 @@ fun ProductsScreen(viewModel: MainViewModel) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(DarkBg)
+            .background(if (darkMode) DarkBg else LightBg)
     ) {
 
         Column {
 
-            ProductsHeader(sorted.size)
+            ProductsHeader(count = sorted.size, darkMode = darkMode)
 
             Spacer(Modifier.height(10.dp))
 
-            SearchBar(search) { search = it }
+            SearchBar(search, { search = it }, darkMode)
 
             Spacer(Modifier.height(10.dp))
 
-            // ---------------------------------------
-            // 🔘 TOOLBAR GRID / LIST + SORT
-            // ---------------------------------------
+            // TOOLBAR
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -139,46 +146,58 @@ fun ProductsScreen(viewModel: MainViewModel) {
 
                 IconToggleChip(
                     selected = viewMode == ViewMode.GRID,
-                    icon = Icons.Default.GridView
-                ) { viewMode = ViewMode.GRID }
+                    icon = Icons.Default.GridView,
+                    onClick = { viewMode = ViewMode.GRID },
+                    darkMode = darkMode
+                )
 
                 Spacer(Modifier.width(8.dp))
 
                 IconToggleChip(
                     selected = viewMode == ViewMode.LIST,
-                    icon = Icons.Default.List
-                ) { viewMode = ViewMode.LIST }
+                    icon = Icons.Default.List,
+                    onClick = { viewMode = ViewMode.LIST },
+                    darkMode = darkMode
+                )
 
                 Spacer(Modifier.width(10.dp))
 
-                // ---- CHIP DE ORDENAMIENTO (NEGRO)
+                // SORT CHIP
                 Box {
                     FilterChip(
                         selected = true,
                         onClick = { sortExpanded = true },
-                        label = { Text(sortMode.label, color = Color.White) },
+                        label = {
+                            Text(
+                                sortMode.label,
+                                color = if (darkMode) TextDark else TextLight
+                            )
+                        },
                         leadingIcon = {
                             Icon(Icons.Default.Sort, null, tint = PurpleAccent)
                         },
                         colors = FilterChipDefaults.filterChipColors(
-                            containerColor = Color(0xFF0F172A),          // Negro
-                            selectedContainerColor = Color(0xFF0F172A),  // Negro seleccionado
-                            labelColor = Color.White,
-                            selectedLabelColor = Color.White
+                            containerColor = if (darkMode) Color(0xFF0F172A) else Color(0xFFEFF0FF),
+                            selectedContainerColor = if (darkMode) Color(0xFF0F172A) else Color(0xFFEFF0FF)
                         )
                     )
 
-
-                    // ---- MENU DESPLEGABLE (NEGRO)
                     DropdownMenu(
                         expanded = sortExpanded,
                         onDismissRequest = { sortExpanded = false },
-                        modifier = Modifier
-                            .background(Color(0xFF1F2937), RoundedCornerShape(12.dp))
+                        modifier = Modifier.background(
+                            if (darkMode) Color(0xFF1F2937) else Color.White,
+                            RoundedCornerShape(12.dp)
+                        )
                     ) {
                         SortMode.values().forEach {
                             DropdownMenuItem(
-                                text = { Text(it.label, color = Color.White) },
+                                text = {
+                                    Text(
+                                        it.label,
+                                        color = if (darkMode) TextDark else TextLight
+                                    )
+                                },
                                 onClick = {
                                     sortMode = it
                                     sortExpanded = false
@@ -193,20 +212,18 @@ fun ProductsScreen(viewModel: MainViewModel) {
 
             Spacer(Modifier.height(8.dp))
 
-            CategoryRow(selectedCategory) { selectedCategory = it }
+            CategoryRow(selectedCategory, { selectedCategory = it }, darkMode)
 
             Spacer(Modifier.height(12.dp))
 
-            // ---------------------------------------
             // LISTA O GRID
-            // ---------------------------------------
             if (viewMode == ViewMode.LIST) {
                 LazyColumn(
                     contentPadding = PaddingValues(12.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     items(sorted) { p ->
-                        ProductListCard(p, viewModel)
+                        ProductListCard(p, viewModel, darkMode)
                     }
                 }
             } else {
@@ -217,7 +234,7 @@ fun ProductsScreen(viewModel: MainViewModel) {
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     items(sorted) { p ->
-                        ProductGridCard(p, viewModel)
+                        ProductGridCard(p, viewModel, darkMode)
                     }
                 }
             }
@@ -229,23 +246,28 @@ fun ProductsScreen(viewModel: MainViewModel) {
 // HEADER
 // -------------------------------------------
 @Composable
-private fun ProductsHeader(count: Int) {
+private fun ProductsHeader(count: Int, darkMode: Boolean) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .background(HeaderGradient)
+            .background(
+                if (darkMode)
+                    Brush.verticalGradient(listOf(Color(0xFF1E2A40), Color(0xFF202A44)))
+                else
+                    Brush.verticalGradient(listOf(Color(0xFFDDE3FF), Color(0xFFE9EBFF)))
+            )
             .padding(horizontal = 16.dp, vertical = 14.dp)
     ) {
         Column {
             Text(
                 "Productos",
-                color = Color.White,
+                color = if (darkMode) TextDark else TextLight,
                 fontWeight = FontWeight.Bold,
                 style = MaterialTheme.typography.titleLarge
             )
             Text(
                 "$count disponibles",
-                color = Color.White.copy(alpha = 0.8f)
+                color = if (darkMode) Color(0xFFCBD5E1) else SubtitleLight
             )
         }
     }
@@ -255,14 +277,23 @@ private fun ProductsHeader(count: Int) {
 // BUSCADOR
 // -------------------------------------------
 @Composable
-private fun SearchBar(value: TextFieldValue, onChange: (TextFieldValue) -> Unit) {
+private fun SearchBar(
+    value: TextFieldValue,
+    onChange: (TextFieldValue) -> Unit,
+    darkMode: Boolean
+) {
     TextField(
         value = value,
         onValueChange = onChange,
         leadingIcon = {
             Icon(Icons.Default.Search, null, tint = PurpleAccent)
         },
-        placeholder = { Text("Buscar productos...", color = Color(0xFF9CA3AF)) },
+        placeholder = {
+            Text(
+                "Buscar productos...",
+                color = if (darkMode) SubtitleDark else SubtitleLight
+            )
+        },
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 14.dp)
@@ -270,8 +301,8 @@ private fun SearchBar(value: TextFieldValue, onChange: (TextFieldValue) -> Unit)
             .shadow(6.dp, RoundedCornerShape(18.dp)),
         shape = RoundedCornerShape(18.dp),
         colors = TextFieldDefaults.colors(
-            focusedContainerColor = Color(0xFF1F2937),
-            unfocusedContainerColor = Color(0xFF1F2937),
+            focusedContainerColor = if (darkMode) DarkCard else Color(0xFFEFF0FF),
+            unfocusedContainerColor = if (darkMode) DarkCard else Color(0xFFEFF0FF),
             focusedIndicatorColor = Color.Transparent,
             unfocusedIndicatorColor = Color.Transparent,
             cursorColor = PurpleAccent
@@ -283,20 +314,27 @@ private fun SearchBar(value: TextFieldValue, onChange: (TextFieldValue) -> Unit)
 // CATEGORÍAS
 // -------------------------------------------
 @Composable
-private fun CategoryRow(selected: String, onSelect: (String) -> Unit) {
+private fun CategoryRow(selected: String, onSelect: (String) -> Unit, darkMode: Boolean) {
+
     Row(
         modifier = Modifier
             .horizontalScroll(rememberScrollState())
             .padding(horizontal = 12.dp),
         horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
+
         Categories.forEach { cat ->
 
             val isSelected = selected == cat
+
             val bg by animateColorAsState(
-                if (isSelected) PurpleAccent else Color(0xFF1F2937),
+                if (isSelected) PurpleAccent
+                else if (darkMode) Color(0xFF1F2937)
+                else Color(0xFFE8E9FF),
                 label = "categoryBg"
             )
+
+            val labelColor = if (darkMode) TextDark else TextLight
 
             Box(
                 modifier = Modifier
@@ -304,7 +342,7 @@ private fun CategoryRow(selected: String, onSelect: (String) -> Unit) {
                     .clickable { onSelect(cat) }
                     .padding(horizontal = 16.dp, vertical = 10.dp)
             ) {
-                Text(cat, color = Color.White)
+                Text(cat, color = if (isSelected) Color.White else labelColor)
             }
         }
     }
@@ -317,12 +355,18 @@ private fun CategoryRow(selected: String, onSelect: (String) -> Unit) {
 private fun IconToggleChip(
     selected: Boolean,
     icon: androidx.compose.ui.graphics.vector.ImageVector,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    darkMode: Boolean
 ) {
     val bg by animateColorAsState(
-        if (selected) Color(0xFF2A3650) else Color(0xFF1E293B),
+        if (selected)
+            if (darkMode) Color(0xFF2A3650) else Color(0xFFC6CBFF)
+        else
+            if (darkMode) Color(0xFF1E293B) else Color(0xFFE8EAFF),
         label = "iconChip"
     )
+
+    val tint = if (selected) PurpleAccent else if (darkMode) SubtitleDark else SubtitleLight
 
     Box(
         modifier = Modifier
@@ -331,11 +375,7 @@ private fun IconToggleChip(
             .clickable { onClick() },
         contentAlignment = Alignment.Center
     ) {
-        Icon(
-            icon,
-            null,
-            tint = if (selected) PurpleAccent else Color(0xFF94A3B8)
-        )
+        Icon(icon, null, tint = tint)
     }
 }
 
@@ -343,14 +383,16 @@ private fun IconToggleChip(
 // CARD LISTA
 // -------------------------------------------
 @Composable
-private fun ProductListCard(p: Product, viewModel: MainViewModel) {
+private fun ProductListCard(p: Product, viewModel: MainViewModel, darkMode: Boolean) {
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .shadow(10.dp, RoundedCornerShape(18.dp)),
         shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = NavyCard)
+        colors = CardDefaults.cardColors(
+            containerColor = if (darkMode) DarkCard else LightCard
+        )
     ) {
 
         Row(
@@ -363,21 +405,35 @@ private fun ProductListCard(p: Product, viewModel: MainViewModel) {
             ProductImagePlaceholder(
                 name = p.name,
                 height = 64.dp,
-                modifier = Modifier.width(72.dp)
+                modifier = Modifier.width(72.dp),
+                darkMode = darkMode
             )
 
             Spacer(Modifier.width(10.dp))
 
             Column(Modifier.weight(1f)) {
-                Text(p.name, color = Color.White, fontWeight = FontWeight.Bold)
-                Text(p.barcode ?: "Sin código", color = Color(0xFF94A3B8))
+
+                Text(
+                    p.name,
+                    color = if (darkMode) TextDark else TextLight,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Text(
+                    p.barcode ?: "Sin código",
+                    color = if (darkMode) SubtitleDark else SubtitleLight
+                )
 
                 Spacer(Modifier.height(6.dp))
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    StockBadge(p.stock)
+                    StockBadge(p.stock, darkMode)
                     Spacer(Modifier.weight(1f))
-                    Text("S/ ${p.price}", color = PurpleAccent, fontWeight = FontWeight.Bold)
+                    Text(
+                        "S/ ${p.price}",
+                        color = PurpleAccent,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             }
 
@@ -399,35 +455,43 @@ private fun ProductListCard(p: Product, viewModel: MainViewModel) {
 // CARD GRID
 // -------------------------------------------
 @Composable
-private fun ProductGridCard(p: Product, viewModel: MainViewModel) {
+private fun ProductGridCard(p: Product, viewModel: MainViewModel, darkMode: Boolean) {
 
     Card(
         modifier = Modifier.shadow(10.dp, RoundedCornerShape(18.dp)),
         shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = NavyCard)
+        colors = CardDefaults.cardColors(
+            containerColor = if (darkMode) DarkCard else LightCard
+        )
     ) {
         Column(Modifier.padding(12.dp)) {
 
             ProductImagePlaceholder(
                 name = p.name,
                 height = 110.dp,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                darkMode = darkMode
             )
 
             Spacer(Modifier.height(8.dp))
 
-            Text(p.name, color = Color.White, fontWeight = FontWeight.Bold, maxLines = 1)
+            Text(
+                p.name,
+                color = if (darkMode) TextDark else TextLight,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1
+            )
 
             Text(
                 p.barcode ?: "Sin código",
-                color = Color(0xFF94A3B8),
+                color = if (darkMode) SubtitleDark else SubtitleLight,
                 maxLines = 1
             )
 
             Spacer(Modifier.height(6.dp))
 
             Row(verticalAlignment = Alignment.CenterVertically) {
-                StockBadge(p.stock)
+                StockBadge(p.stock, darkMode)
                 Spacer(Modifier.weight(1f))
                 Text("S/ ${p.price}", color = PurpleAccent, fontWeight = FontWeight.Bold)
             }
@@ -455,13 +519,14 @@ private fun ProductGridCard(p: Product, viewModel: MainViewModel) {
 private fun ProductImagePlaceholder(
     name: String,
     height: Dp,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    darkMode: Boolean
 ) {
     Box(
         modifier = modifier
             .height(height)
             .clip(RoundedCornerShape(12.dp))
-            .background(Color(0xFF1E293B)),
+            .background(if (darkMode) Color(0xFF0F172A) else Color(0xFFEFF0FF)),
         contentAlignment = Alignment.Center
     ) {
         Text(
@@ -474,18 +539,21 @@ private fun ProductImagePlaceholder(
 }
 
 // -------------------------------------------
+// STOCK BADGE
+// -------------------------------------------
 @Composable
-private fun StockBadge(stock: Int) {
+private fun StockBadge(stock: Int, darkMode: Boolean) {
+
     val bg = when {
-        stock <= 5 -> Color(0xFF450A0A)
-        stock <= 20 -> Color(0xFF422006)
-        else -> Color(0xFF052E16)
+        stock <= 5 -> if (darkMode) Color(0xFF450A0A) else Color(0xFFFFE6E6)
+        stock <= 20 -> if (darkMode) Color(0xFF422006) else Color(0xFFFFF8E1)
+        else -> if (darkMode) Color(0xFF052E16) else Color(0xFFE9FFF2)
     }
 
     val fg = when {
         stock <= 5 -> Color(0xFFFCA5A5)
         stock <= 20 -> Color(0xFFFCD34D)
-        else -> Color(0xFF6EE7B7)
+        else -> Color(0xFF16A34A)
     }
 
     Box(

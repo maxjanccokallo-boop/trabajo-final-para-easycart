@@ -37,15 +37,24 @@ import com.example.easycart.viewmodel.MainViewModel
 import kotlin.math.roundToInt
 
 // -------------------------
-// GRADIENTES
+// GRADIENTES LIGHT / DARK
 // -------------------------
 private val PromoGradient = Brush.horizontalGradient(
     listOf(Color(0xFFFF4F9A), Color(0xFFFF7A2F))
 )
 
-private val ScreenGradientOffers = Brush.verticalGradient(
+private val OffersBgLight = Brush.verticalGradient(
     listOf(Color(0xFFF7F6FB), Color(0xFFF1ECFF))
 )
+
+private val OffersBgDark = Brush.verticalGradient(
+    listOf(Color(0xFF020617), Color(0xFF020617))
+)
+
+private val CardLight = Color.White
+private val CardDark = Color(0xFF0F172A)
+private val TextPrimaryDark = Color.White
+private val TextSecondaryDark = Color(0xFF9CA3AF)
 
 // -------------------------
 // ENUM FILTRO
@@ -57,15 +66,15 @@ private enum class OfferFilter(val label: String) {
 }
 
 // -------------------------
-// RESPONSIVE — CORREGIDO
+// RESPONSIVE
 // -------------------------
 @Composable
 private fun getColumnCount(): Int {
     val width = LocalConfiguration.current.screenWidthDp
     return when {
-        width < 600 -> 1     // celulares
-        width < 840 -> 2     // tablets pequeñas
-        else -> 3            // pantallas grandes
+        width < 600 -> 1
+        width < 840 -> 2
+        else -> 3
     }
 }
 
@@ -73,7 +82,11 @@ private fun getColumnCount(): Int {
 // PANTALLA COMPLETA
 // -------------------------
 @Composable
-fun OffersScreen(viewModel: MainViewModel) {
+fun OffersScreen(
+    viewModel: MainViewModel,
+    darkMode: Boolean
+) {
+
     val uiState by viewModel.uiState.collectAsState()
 
     val productsWithOffers = remember(uiState.products) {
@@ -112,10 +125,12 @@ fun OffersScreen(viewModel: MainViewModel) {
 
     val columns = getColumnCount()
 
+    val bg = if (darkMode) OffersBgDark else OffersBgLight
+
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(ScreenGradientOffers)
+            .background(bg)
     ) {
         LazyColumn(
             verticalArrangement = Arrangement.spacedBy(18.dp),
@@ -124,13 +139,16 @@ fun OffersScreen(viewModel: MainViewModel) {
 
             item { PromoHeaderCard(totalSavings) }
 
-            item { OfferChips(selectedFilter) { selectedFilter = it } }
+            item { OfferChips(selectedFilter, darkMode) { selectedFilter = it } }
 
-            item { OfferCounts(filtered.size, hotProducts.size) }
+            item { OfferCounts(filtered.size, hotProducts.size, darkMode) }
 
             item {
                 if (hotProducts.isNotEmpty()) {
-                    SuperHotRow(hotProducts) { p ->
+                    SuperHotRow(
+                        hotList = hotProducts,
+                        darkMode = darkMode
+                    ) { p ->
                         p.barcode.let { viewModel.onBarcodeScanned(it) }
                     }
                 }
@@ -142,6 +160,7 @@ fun OffersScreen(viewModel: MainViewModel) {
                         filtered.forEach { product ->
                             OfferCardPro(
                                 product = product,
+                                darkMode = darkMode,
                                 onAddClick = {
                                     product.barcode.let { viewModel.onBarcodeScanned(it) }
                                 }
@@ -151,14 +170,14 @@ fun OffersScreen(viewModel: MainViewModel) {
                 } else {
                     LazyVerticalGrid(
                         columns = GridCells.Fixed(columns),
-                        modifier = Modifier
-                            .padding(horizontal = 16.dp),
+                        modifier = Modifier.padding(horizontal = 16.dp),
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         items(filtered) { product ->
                             OfferCardPro(
                                 product = product,
+                                darkMode = darkMode,
                                 onAddClick = {
                                     product.barcode.let { viewModel.onBarcodeScanned(it) }
                                 }
@@ -247,7 +266,16 @@ private fun PromoHeaderCard(totalSavings: Double) {
 // CHIPS
 // -------------------------
 @Composable
-private fun OfferChips(selected: OfferFilter, onSelect: (OfferFilter) -> Unit) {
+private fun OfferChips(
+    selected: OfferFilter,
+    darkMode: Boolean,
+    onSelect: (OfferFilter) -> Unit
+) {
+
+    val cardBg = if (darkMode) CardDark else Color.White
+    val textNormal = if (darkMode) TextSecondaryDark else Color.DarkGray
+    val selectedBg = if (darkMode) Color(0xFF7B61FF) else Color(0xFF7B61FF)
+    val selectedFg = Color.White
 
     Row(
         modifier = Modifier
@@ -259,13 +287,13 @@ private fun OfferChips(selected: OfferFilter, onSelect: (OfferFilter) -> Unit) {
         OfferFilter.values().forEach { filter ->
 
             val bg by animateColorAsState(
-                targetValue = if (selected == filter) Color(0xFF7B61FF) else Color.White,
+                targetValue = if (selected == filter) selectedBg else cardBg,
                 animationSpec = tween(250),
                 label = ""
             )
 
             val fg by animateColorAsState(
-                targetValue = if (selected == filter) Color.White else Color.DarkGray,
+                targetValue = if (selected == filter) selectedFg else textNormal,
                 animationSpec = tween(250),
                 label = ""
             )
@@ -287,14 +315,20 @@ private fun OfferChips(selected: OfferFilter, onSelect: (OfferFilter) -> Unit) {
 // CONTADORES
 // -------------------------
 @Composable
-private fun OfferCounts(filteredCount: Int, hotCount: Int) {
+private fun OfferCounts(
+    filteredCount: Int,
+    hotCount: Int,
+    darkMode: Boolean
+) {
+    val textColor = if (darkMode) TextSecondaryDark else Color.DarkGray
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text("$filteredCount ofertas", color = Color.DarkGray)
+        Text("$filteredCount ofertas", color = textColor)
 
         Spacer(Modifier.weight(1f))
 
@@ -320,15 +354,18 @@ private fun OfferCounts(filteredCount: Int, hotCount: Int) {
 @Composable
 private fun SuperHotRow(
     hotList: List<Product>,
+    darkMode: Boolean,
     onAddClick: (Product) -> Unit
 ) {
+    val textPrimary = if (darkMode) TextPrimaryDark else Color.Black
+
     Column(Modifier.padding(start = 16.dp)) {
 
         Row(
             modifier = Modifier.fillMaxWidth().padding(end = 16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("🔥 Súper Hot", fontWeight = FontWeight.Bold)
+            Text("🔥 Súper Hot", fontWeight = FontWeight.Bold, color = textPrimary)
             Spacer(Modifier.weight(1f))
             Text("Ver todas >", color = Color(0xFF7B61FF))
         }
@@ -336,7 +373,13 @@ private fun SuperHotRow(
         Spacer(Modifier.height(10.dp))
 
         LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            items(hotList) { p -> HotCardMini(p) { onAddClick(p) } }
+            items(hotList) { p ->
+                HotCardMini(
+                    product = p,
+                    darkMode = darkMode,
+                    onAdd = { onAddClick(p) }
+                )
+            }
         }
     }
 }
@@ -345,16 +388,25 @@ private fun SuperHotRow(
 // CARD MINI
 // -------------------------
 @Composable
-private fun HotCardMini(product: Product, onAdd: (Product) -> Unit) {
+private fun HotCardMini(
+    product: Product,
+    darkMode: Boolean,
+    onAdd: (Product) -> Unit
+) {
     val base = product.price
     val offer = product.offerPrice ?: base
     val discount = (((base - offer) / base) * 100).roundToInt().coerceAtLeast(0)
+
+    val cardBg = if (darkMode) CardDark else CardLight
+    val textPrimary = if (darkMode) TextPrimaryDark else Color.Black
+    val textSecondary = if (darkMode) TextSecondaryDark else Color.Gray
 
     Card(
         modifier = Modifier
             .width(210.dp)
             .shadow(8.dp, RoundedCornerShape(18.dp)),
-        shape = RoundedCornerShape(18.dp)
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = cardBg)
     ) {
         Column {
 
@@ -387,12 +439,12 @@ private fun HotCardMini(product: Product, onAdd: (Product) -> Unit) {
                         .align(Alignment.TopEnd),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(Icons.Default.FavoriteBorder, null)
+                    Icon(Icons.Default.FavoriteBorder, null, tint = Color.DarkGray)
                 }
             }
 
             Column(Modifier.padding(10.dp)) {
-                Text(product.name, maxLines = 1, fontWeight = FontWeight.Bold)
+                Text(product.name, maxLines = 1, fontWeight = FontWeight.Bold, color = textPrimary)
                 Spacer(Modifier.height(2.dp))
                 Text(
                     "S/ ${"%.2f".format(offer)}",
@@ -401,7 +453,7 @@ private fun HotCardMini(product: Product, onAdd: (Product) -> Unit) {
                 )
                 Text(
                     "Antes S/ ${"%.2f".format(base)}",
-                    color = Color.Gray,
+                    color = textSecondary,
                     textDecoration = TextDecoration.LineThrough
                 )
 
@@ -413,7 +465,7 @@ private fun HotCardMini(product: Product, onAdd: (Product) -> Unit) {
                     shape = RoundedCornerShape(10.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF7B61FF))
                 ) {
-                    Text("Agregar")
+                    Text("Agregar", color = Color.White)
                 }
             }
         }
@@ -426,17 +478,23 @@ private fun HotCardMini(product: Product, onAdd: (Product) -> Unit) {
 @Composable
 private fun OfferCardPro(
     product: Product,
+    darkMode: Boolean,
     onAddClick: () -> Unit
 ) {
     val base = product.price
     val offer = product.offerPrice ?: base
     val discount = (((base - offer) / base) * 100).roundToInt().coerceAtLeast(0)
 
+    val cardBg = if (darkMode) CardDark else CardLight
+    val textPrimary = if (darkMode) TextPrimaryDark else Color.Black
+    val textSecondary = if (darkMode) TextSecondaryDark else Color.Gray
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .shadow(10.dp, RoundedCornerShape(18.dp)),
-        shape = RoundedCornerShape(18.dp)
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = cardBg)
     ) {
         Column {
 
@@ -478,16 +536,15 @@ private fun OfferCardPro(
                 }
             }
 
-            // Contenido
             Column(Modifier.padding(16.dp)) {
 
-                Text(product.name, fontWeight = FontWeight.Bold)
+                Text(product.name, fontWeight = FontWeight.Bold, color = textPrimary)
 
                 Spacer(Modifier.height(6.dp))
 
                 Text(
                     product.description ?: "Oferta especial disponible",
-                    color = Color.Gray,
+                    color = textSecondary,
                     maxLines = 2
                 )
 
@@ -498,7 +555,7 @@ private fun OfferCardPro(
                     Column(Modifier.weight(1f)) {
                         Text(
                             "Antes S/ ${"%.2f".format(base)}",
-                            color = Color.Gray,
+                            color = textSecondary,
                             textDecoration = TextDecoration.LineThrough
                         )
                         Text(

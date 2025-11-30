@@ -120,22 +120,31 @@ fun HomeScreen(
 
                 BottomTab.Cart ->
                     CartScreen(
+                        navController = navController,
                         viewModel = viewModel,
-                        navController = navController
+                        darkMode = darkMode     // ← AQUÍ SE SOLUCIONA
                     )
 
                 BottomTab.Products ->
-                    ProductsScreen(viewModel)
+                    ProductsScreen(
+                        viewModel = viewModel,
+                        darkMode = darkMode
+                    )
 
                 BottomTab.Offers ->
-                    OffersScreen(viewModel)
+                    OffersScreen(viewModel,
+                        darkMode = darkMode)
 
                 BottomTab.Bluetooth ->
-                    BluetoothScreen(mainViewModel = viewModel)
+                    BluetoothScreen(
+                        mainViewModel = viewModel,
+                        darkMode = darkMode
+                    )
 
                 BottomTab.Profile ->
                     ProfileScreen(
                         viewModel = viewModel,
+                        darkMode = darkMode,
                         onLogout = onLogout
                     )
             }

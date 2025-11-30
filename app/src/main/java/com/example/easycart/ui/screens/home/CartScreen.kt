@@ -30,37 +30,52 @@ import com.example.easycart.ui.navigation.Screen
 import com.example.easycart.viewmodel.MainViewModel
 
 // ================================
-// 🎨 GRADIENTES
+// 🎨 PALETA OFICIAL EASY CART
 // ================================
-private val CartScreenBg = Brush.verticalGradient(
-    listOf(Color(0xFFF7F6FB), Color(0xFFF1ECFF))
-)
+private val DarkBg = Color(0xFF020617)
+private val LightBg = Brush.verticalGradient(listOf(Color(0xFFF7F6FB), Color(0xFFF1ECFF)))
 
+private val DarkCard = Color(0xFF0F172A)
+private val LightCard = Color.White
+
+private val DarkText = Color.White
+private val LightText = Color(0xFF111827)
+
+private val SubtitleDark = Color(0xFF9CA3AF)
+private val SubtitleLight = Color.Gray
+
+// Tus gradientes originales (NO se tocan)
 private val PurpleButtonGradient = Brush.horizontalGradient(
     listOf(Color(0xFF6D5DF6), Color(0xFF9B4DFF))
 )
-
 private val GreenButtonGradient = Brush.horizontalGradient(
     listOf(Color(0xFF10B981), Color(0xFF22C55E))
 )
 
 // ================================
-// ⭐ CART SCREEN PRO
+// ⭐ CART SCREEN CON DARK MODE
 // ================================
 @Composable
 fun CartScreen(
     navController: NavController,
-    viewModel: MainViewModel
+    viewModel: MainViewModel,
+    darkMode: Boolean       // <-- SE AÑADE
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
     val widthDp = LocalConfiguration.current.screenWidthDp
     val horizontalPad = if (widthDp < 400) 14.dp else 18.dp
 
+    // Fondo dinámico
+    val bgModifier = if (darkMode)
+        Modifier.background(DarkBg)
+    else
+        Modifier.background(LightBg)
+
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(CartScreenBg)
+            .then(bgModifier)
     ) {
         Column(
             modifier = Modifier
@@ -68,49 +83,40 @@ fun CartScreen(
                 .padding(horizontal = horizontalPad, vertical = 10.dp)
         ) {
 
-            // ============================
             // 🛒 CARRITO VACÍO
-            // ============================
             if (uiState.cart.isEmpty()) {
                 EmptyCartState(
                     onScanClick = {
-                        // ir a tab Escanear sin usar ruta inexistente
                         navController.currentBackStackEntry
                             ?.savedStateHandle?.set("targetTab", BottomTab.Scan.name)
-
                         navController.navigate(Screen.Home.route) { launchSingleTop = true }
                     },
                     onCatalogClick = {
-                        // ir a tab Productos sin usar "products"
                         navController.currentBackStackEntry
                             ?.savedStateHandle?.set("targetTab", BottomTab.Products.name)
-
                         navController.navigate(Screen.Home.route) { launchSingleTop = true }
-                    }
+                    },
+                    darkMode = darkMode
                 )
                 return@Column
             }
 
-            // ============================
             // 🧾 TÍTULO + SUBTÍTULO
-            // ============================
             Text(
                 text = "Mi Carrito",
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Black,
-                color = Color(0xFF111827)
+                color = if (darkMode) DarkText else LightText
             )
             Text(
                 text = "${uiState.cart.size} productos",
                 style = MaterialTheme.typography.bodySmall,
-                color = Color.Gray
+                color = if (darkMode) SubtitleDark else SubtitleLight
             )
 
             Spacer(Modifier.height(10.dp))
 
-            // ============================
-            // 🧾 LISTA DEL CARRITO
-            // ============================
+            // 🧾 LISTA
             LazyColumn(
                 modifier = Modifier
                     .weight(1f)
@@ -123,32 +129,37 @@ fun CartScreen(
                         item = item,
                         onMinus = { viewModel.decreaseQuantity(item) },
                         onPlus = { viewModel.increaseQuantity(item) },
-                        onDelete = { viewModel.removeItem(item) }
+                        onDelete = { viewModel.removeItem(item) },
+                        darkMode = darkMode
                     )
                 }
             }
 
-            // ============================
-            // 💰 RESUMEN / TOTAL
-            // ============================
+            // 💰 RESUMEN
             CartSummaryPro(
                 subtotal = uiState.cart.sumOf { it.quantity * it.unitPrice },
-                total = uiState.cart.sumOf { it.totalPrice }, // YA usa descuento
+                total = uiState.cart.sumOf { it.totalPrice },
                 onPayClick = { navController.navigate("payment") },
-                onClearClick = { viewModel.clearCart() }
+                onClearClick = { viewModel.clearCart() },
+                darkMode = darkMode
             )
         }
     }
 }
 
 // =====================================================================
-// ✅ ESTADO VACÍO PRO
+// 🛒 ESTADO VACÍO PRO
 // =====================================================================
 @Composable
 private fun EmptyCartState(
     onScanClick: () -> Unit,
-    onCatalogClick: () -> Unit
+    onCatalogClick: () -> Unit,
+    darkMode: Boolean
 ) {
+    val titleColor = if (darkMode) DarkText else LightText
+    val subtitleColor = if (darkMode) SubtitleDark else SubtitleLight
+    val circleBg = if (darkMode) DarkCard else Color(0xFFEDEBFF)
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -157,11 +168,12 @@ private fun EmptyCartState(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
 
+        // ICONO
         Box(
             modifier = Modifier
                 .size(160.dp)
                 .clip(CircleShape)
-                .background(Color(0xFFEDEBFF)),
+                .background(circleBg),
             contentAlignment = Alignment.Center
         ) {
             Icon(
@@ -178,7 +190,7 @@ private fun EmptyCartState(
             text = "Carrito Vacío",
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold,
-            color = Color(0xFF111827)
+            color = titleColor
         )
 
         Spacer(Modifier.height(6.dp))
@@ -186,7 +198,7 @@ private fun EmptyCartState(
         Text(
             text = "¡Comienza a agregar tus productos favoritos!",
             style = MaterialTheme.typography.bodyMedium,
-            color = Color(0xFF6B7280),
+            color = subtitleColor,
             textAlign = TextAlign.Center
         )
 
@@ -210,6 +222,9 @@ private fun EmptyCartState(
     }
 }
 
+// =====================================================================
+// 🔘 BOTÓN GRADIENTE (NO CAMBIA NADA)
+// =====================================================================
 @Composable
 private fun GradientButton(
     text: String,
@@ -243,22 +258,27 @@ private fun GradientButton(
 }
 
 // =====================================================================
-// ✅ ITEM CARD PRO (ofertas + eliminar)
+// 🧾 ITEM DEL CARRITO
 // =====================================================================
 @Composable
 private fun CartItemCardPro(
     item: CartItem,
     onMinus: () -> Unit,
     onPlus: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    darkMode: Boolean
 ) {
+    val cardColor = if (darkMode) DarkCard else Color.White
+    val titleColor = if (darkMode) DarkText else LightText
+    val subtitle = if (darkMode) SubtitleDark else SubtitleLight
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .animateContentSize(),
         shape = RoundedCornerShape(18.dp),
         elevation = CardDefaults.cardElevation(5.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White)
+        colors = CardDefaults.cardColors(containerColor = cardColor)
     ) {
         Column(
             Modifier
@@ -268,40 +288,42 @@ private fun CartItemCardPro(
 
             Row(verticalAlignment = Alignment.Top) {
 
-                // Imagen placeholder
+                // Imagen
                 Box(
                     modifier = Modifier
                         .size(60.dp)
                         .clip(RoundedCornerShape(12.dp))
-                        .background(Color(0xFFF1F2F4)),
+                        .background(if (darkMode) DarkBg else Color(0xFFF1F2F4)),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         Icons.Default.LocalMall,
                         contentDescription = null,
-                        tint = Color(0xFF9CA3AF)
+                        tint = subtitle
                     )
                 }
 
                 Spacer(Modifier.width(12.dp))
 
                 Column(Modifier.weight(1f)) {
+
                     Text(
                         text = item.productName,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        overflow = TextOverflow.Ellipsis,
+                        color = titleColor
                     )
 
                     Spacer(Modifier.height(4.dp))
 
-                    // Precio normal / oferta
+                    // PRECIO NORMAL / OFERTA
                     if (item.hasOffer && item.offerPrice != null) {
                         Text(
                             text = "S/ ${"%.2f".format(item.unitPrice)}",
                             style = MaterialTheme.typography.bodySmall,
-                            color = Color.Gray,
+                            color = subtitle,
                             textDecoration = TextDecoration.LineThrough
                         )
 
@@ -334,7 +356,8 @@ private fun CartItemCardPro(
                         Text(
                             text = "S/ ${"%.2f".format(item.unitPrice)}",
                             style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
+                            color = titleColor
                         )
                     }
 
@@ -342,7 +365,7 @@ private fun CartItemCardPro(
                     Text(
                         text = "x${item.quantity} • ${item.barcode}",
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color.Gray
+                        color = subtitle
                     )
 
                     item.expiresAt?.toDate()?.let {
@@ -356,13 +379,13 @@ private fun CartItemCardPro(
                 }
 
                 Column(horizontalAlignment = Alignment.End) {
-                    IconButton(onClick = { /* favorito si quieres */ }) {
-                        Icon(Icons.Default.FavoriteBorder, contentDescription = null)
+                    IconButton(onClick = {}) {
+                        Icon(Icons.Default.FavoriteBorder, contentDescription = null, tint = subtitle)
                     }
                     Text(
                         text = "S/ ${"%.2f".format(item.totalPrice)}",
                         fontWeight = FontWeight.Black,
-                        color = Color(0xFF111827)
+                        color = titleColor
                     )
                 }
             }
@@ -379,14 +402,15 @@ private fun CartItemCardPro(
                     horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+
                     IconButton(
                         onClick = onMinus,
                         modifier = Modifier
                             .size(36.dp)
                             .clip(CircleShape)
-                            .background(Color(0xFFF3F4F6))
+                            .background(if (darkMode) DarkBg else Color(0xFFF3F4F6))
                     ) {
-                        Icon(Icons.Default.Remove, contentDescription = "Disminuir")
+                        Icon(Icons.Default.Remove, contentDescription = "menos", tint = subtitle)
                     }
 
                     Spacer(Modifier.width(10.dp))
@@ -394,7 +418,8 @@ private fun CartItemCardPro(
                     Text(
                         item.quantity.toString(),
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        color = titleColor
                     )
 
                     Spacer(Modifier.width(10.dp))
@@ -404,9 +429,9 @@ private fun CartItemCardPro(
                         modifier = Modifier
                             .size(36.dp)
                             .clip(CircleShape)
-                            .background(Color(0xFFEDEBFF))
+                            .background(if (darkMode) Color(0xFF2E1065) else Color(0xFFEDEBFF))
                     ) {
-                        Icon(Icons.Default.Add, contentDescription = "Aumentar", tint = Color(0xFF6D5DF6))
+                        Icon(Icons.Default.Add, contentDescription = "más", tint = Color(0xFF6D5DF6))
                     }
                 }
 
@@ -415,7 +440,7 @@ private fun CartItemCardPro(
                     modifier = Modifier
                         .size(40.dp)
                         .clip(RoundedCornerShape(10.dp))
-                        .background(Color(0xFFFFEDED))
+                        .background(if (darkMode) Color(0xFF450A0A) else Color(0xFFFFEDED))
                 ) {
                     Icon(Icons.Default.Delete, contentDescription = null, tint = Color(0xFFD32F2F))
                 }
@@ -425,22 +450,27 @@ private fun CartItemCardPro(
 }
 
 // =====================================================================
-// ✅ RESUMEN PRO (subtotal vs total)
+// 🧾 RESUMEN FINAL
 // =====================================================================
 @Composable
 private fun CartSummaryPro(
     subtotal: Double,
     total: Double,
     onPayClick: () -> Unit,
-    onClearClick: () -> Unit
+    onClearClick: () -> Unit,
+    darkMode: Boolean
 ) {
+    val cardColor = if (darkMode) DarkCard else Color.White
+    val textPrimary = if (darkMode) DarkText else LightText
+    val subtitle = if (darkMode) SubtitleDark else SubtitleLight
+
     val ahorro = (subtotal - total).coerceAtLeast(0.0)
 
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(18.dp),
         elevation = CardDefaults.cardElevation(6.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White)
+        colors = CardDefaults.cardColors(containerColor = cardColor)
     ) {
         Column(
             Modifier
@@ -450,26 +480,30 @@ private fun CartSummaryPro(
         ) {
 
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("Subtotal", color = Color.Gray)
-                Text("S/ ${"%.2f".format(subtotal)}", fontWeight = FontWeight.SemiBold)
+                Text("Subtotal", color = subtitle)
+                Text("S/ ${"%.2f".format(subtotal)}", fontWeight = FontWeight.SemiBold, color = textPrimary)
             }
 
             if (ahorro > 0) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     Text("Ahorro por ofertas", color = Color(0xFF10B981))
-                    Text("- S/ ${"%.2f".format(ahorro)}", color = Color(0xFF10B981), fontWeight = FontWeight.Bold)
+                    Text(
+                        "- S/ ${"%.2f".format(ahorro)}",
+                        color = Color(0xFF10B981),
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             }
 
-            Divider()
+            Divider(color = if (darkMode) Color(0xFF1E293B) else Color.LightGray)
 
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("Total", style = MaterialTheme.typography.titleMedium)
+                Text("Total", style = MaterialTheme.typography.titleMedium, color = textPrimary)
                 Text(
                     "S/ ${"%.2f".format(total)}",
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Black,
-                    color = Color(0xFF111827)
+                    color = textPrimary
                 )
             }
 
@@ -479,7 +513,9 @@ private fun CartSummaryPro(
                     .fillMaxWidth()
                     .height(52.dp),
                 shape = RoundedCornerShape(14.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6D5DF6))
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFF6D5DF6)
+                )
             ) {
                 Text("Proceder al pago", color = Color.White, fontWeight = FontWeight.Bold)
             }
