@@ -41,9 +41,6 @@ class MainViewModel(
     private val repository: EasyCartRepository
 ) : ViewModel() {
 
-    // ===============================
-    // 🌙 MANEJO DE TEMA GLOBAL
-    // ===============================
     private val _darkTheme = MutableStateFlow(false)
     val darkTheme: StateFlow<Boolean> = _darkTheme.asStateFlow()
 
@@ -64,13 +61,9 @@ class MainViewModel(
         observeCart()
         loadPurchases()
 
-        // ⭐ AGREGADO: LISTENER DE CAMBIOS DE USUARIO
         repository.onAuthStateChanged { firebaseUser ->
             _uiState.update { it.copy(user = firebaseUser) }
-
-            if (firebaseUser != null) {
-                loadPurchases()
-            }
+            if (firebaseUser != null) loadPurchases()
         }
     }
 
@@ -94,6 +87,7 @@ class MainViewModel(
                 enviarPermiso()
                 addProductToCart(product)
                 activateGreenLED()
+
                 _uiState.update {
                     it.copy(
                         lastScanned = product.name,
@@ -109,6 +103,7 @@ class MainViewModel(
                 }
             } else {
                 activateRedLED()
+
                 _uiState.update {
                     it.copy(
                         scanError = "Producto no encontrado",
@@ -133,7 +128,8 @@ class MainViewModel(
 
     fun increaseQuantity(item: CartItem) = viewModelScope.launch {
         val uid = repository.currentUser()?.uid ?: return@launch
-        val product = uiState.value.products.firstOrNull { it.id == item.productId } ?: item.toProduct()
+        val product = uiState.value.products.firstOrNull { it.id == item.productId }
+            ?: item.toProduct()
         repository.addOrIncrementCartItem(uid, product)
     }
 
@@ -154,23 +150,20 @@ class MainViewModel(
         }
     }
 
+    // ⭐⭐⭐ CORREGIDO — AHORA DEVUELVE ITEMS Y NO FALLA ⭐⭐⭐
     fun finalizePurchase(onResult: (Boolean, List<CartItem>) -> Unit) {
         val uid = uiState.value.user?.uid ?: return
 
-        // COPIA los productos ANTES de limpiar el carrito
         val purchasedItems = uiState.value.cart.map { it.copy() }
 
         viewModelScope.launch {
             val ok = repository.finalizePurchase(uid, purchasedItems)
 
-            // Ahora SI devolvemos los items correctos
             onResult(ok, purchasedItems)
 
-            // Y recién después limpiamos el carrito
             if (ok) clearCart()
         }
     }
-
 
     fun loadPurchases() {
         val uid = repository.currentUser()?.uid ?: return
@@ -200,9 +193,7 @@ class MainViewModel(
         val uid = repository.currentUser()?.uid ?: return@launch
         repository.listenCart(uid).collect { items ->
             val total = items.sumOf { it.finalUnitPrice * it.quantity }
-            _uiState.update {
-                it.copy(cart = items, total = total)
-            }
+            _uiState.update { it.copy(cart = items, total = total) }
         }
     }
 
@@ -217,18 +208,18 @@ class MainViewModel(
     fun activateGreenLED() = flashLED(LedState.GREEN)
     fun activateRedLED() = flashLED(LedState.RED, 50)
 
+    // ⭐⭐⭐ CORREGIDO — SIN ?: Y SIN CRASH DEL PDF ⭐⭐⭐
     private fun CartItem.toProduct(): Product {
         return Product(
             id = this.productId,
             name = this.productName,
             barcode = this.barcode,
             price = this.unitPrice,
-            stock = this.maxStock ?: 0,
+            stock = this.maxStock,  // ← ESTA LÍNEA ESTABA MAL
             expiresAt = this.expiresAt
         )
     }
 
-    // ⭐ AGREGADO: LLAMAR DESPUÉS DEL LOGIN
     fun refreshUser() {
         val newUser = repository.currentUser()
         _uiState.update { it.copy(user = newUser) }

@@ -11,7 +11,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
@@ -23,6 +22,7 @@ import com.example.easycart.viewmodel.MainViewModel
 import androidx.compose.foundation.BorderStroke
 import com.example.easycart.utils.QrGenerator
 import com.example.easycart.utils.InvoicePdfGenerator
+import androidx.compose.ui.draw.shadow
 
 private val PaymentBg = Brush.verticalGradient(
     listOf(Color(0xFFF7F6FB), Color(0xFFF1ECFF))
@@ -94,12 +94,12 @@ fun PaymentScreen(
 
             Spacer(Modifier.height(35.dp))
 
-            // ⭐ BOTÓN FINAL DE PAGO
+            // ⭐ BOTÓN CONFIRMAR PAGO – AHORA FUNCIONA SIEMPRE
             Button(
                 onClick = {
                     viewModel.finalizePurchase { ok, purchasedItems ->
 
-                        if (ok) {
+                        if (ok && purchasedItems.isNotEmpty()) {
 
                             val pdf = InvoicePdfGenerator.generateInvoicePdf(
                                 context = context,
@@ -109,11 +109,11 @@ fun PaymentScreen(
 
                             lastPdfPath = pdf?.absolutePath ?: ""
 
-                            // 🔥 CORRECCIÓN: enviar pdfPath en la ruta correcta
                             navController.navigate("payment_success?pdfPath=$lastPdfPath")
                         }
                     }
                 },
+                enabled = uiState.cart.isNotEmpty(),      // ⭐ FIX IMPORTANTE
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(54.dp),
