@@ -28,14 +28,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.easycart.data.model.BtDeviceUi
-import com.example.easycart.di.AppModule
 import com.example.easycart.viewmodel.BluetoothViewModel
 import com.example.easycart.viewmodel.LedState
 import com.example.easycart.viewmodel.MainViewModel
-import com.example.easycart.viewmodel.MainViewModelFactory
 import androidx.compose.foundation.BorderStroke
+import androidx.lifecycle.viewmodel.compose.viewModel
 
 // ===============================================================
 // 🎨 COLORES Y ESTILOS
@@ -58,10 +56,14 @@ private val PrimaryBlue = Color(0xFF2563EB)
 // ===============================================================
 
 @Composable
-fun BluetoothScreen(
-    vm: BluetoothViewModel = viewModel(),
-    mainViewModel: MainViewModel = viewModel(factory = MainViewModelFactory(AppModule.repo))
-) {
+fun BluetoothScreen(mainViewModel: MainViewModel) {
+
+    val vm: BluetoothViewModel = viewModel()
+
+    LaunchedEffect(Unit) {
+        // Obtener estado de conexión del servicio global
+        vm.refreshState()
+    }
 
     // LED STATE
     val uiState by mainViewModel.uiState.collectAsState()
@@ -385,8 +387,9 @@ fun BluetoothScreen(
                         connectedAddress = dev.address
                         connectedName = dev.name
 
-                        vm.connect(dev.address) {
+                        vm.connectToDevice(dev.address) { error ->
                             isConnecting = false
+                            error?.let { println("BT_FLOW ERROR: $it") }
                         }
                     },
                     onDisconnect = {
@@ -433,9 +436,8 @@ private fun LedChip(label: String, selected: Boolean) {
 // ===============================================================
 // DEVICE CARD
 // ===============================================================
-
 @Composable
-private fun DeviceCardPro(
+fun DeviceCardPro(
     dev: BtDeviceUi,
     isConnected: Boolean,
     isConnecting: Boolean,
@@ -446,70 +448,26 @@ private fun DeviceCardPro(
         Modifier
             .fillMaxWidth()
             .animateContentSize(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(CardBg),
-        border = BorderStroke(1.dp, BorderGray)
+        shape = RoundedCornerShape(18.dp),
+        border = BorderStroke(1.dp, if (isConnected) PrimaryBlue else BorderGray),
+        colors = CardDefaults.cardColors(CardBg)
     ) {
-        Row(
-            Modifier.padding(14.dp),
-            verticalAlignment = Alignment.CenterVertically
+        Column(
+            Modifier.padding(14.dp)
         ) {
-
-            Box(
-                Modifier
-                    .size(52.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(PrimaryBlue),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(Icons.Default.Memory, null, tint = Color.White)
-            }
-
-            Spacer(Modifier.width(12.dp))
-
-            Column(Modifier.weight(1f)) {
-                Text(dev.name, fontWeight = FontWeight.Bold)
-                Text(dev.address, fontSize = 12.sp, color = Color.Gray)
-
-                Spacer(Modifier.height(6.dp))
-
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.NetworkWifi, null, tint = Color(0xFF22C55E), modifier = Modifier.size(16.dp))
-                    Spacer(Modifier.width(4.dp))
-                    Text("${dev.signal}%", fontSize = 12.sp)
-
-                    Spacer(Modifier.width(12.dp))
-
-                    Icon(Icons.Default.BatteryFull, null, tint = Color(0xFF10B981), modifier = Modifier.size(16.dp))
-                    Spacer(Modifier.width(4.dp))
-                    Text("${dev.battery}%", fontSize = 12.sp)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.DeveloperBoard, null, tint = PrimaryBlue)
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(dev.name, fontWeight = FontWeight.Bold)
+                    Text(dev.address, color = Color.Gray, fontSize = 12.sp)
                 }
-            }
-
-            if (isConnected) {
-                Button(
-                    onClick = onDisconnect,
-                    colors = ButtonDefaults.buttonColors(Color(0xFFEF4444)),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Text("Desconectar", color = Color.White)
-                }
-            } else {
-                Button(
-                    onClick = onConnect,
-                    colors = ButtonDefaults.buttonColors(PrimaryBlue),
-                    shape = RoundedCornerShape(12.dp),
-                    enabled = !isConnecting
-                ) {
-                    if (isConnecting) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(16.dp),
-                            strokeWidth = 2.dp,
-                            color = Color.White
-                        )
-                        Spacer(Modifier.width(6.dp))
+                if (isConnecting) {
+                    CircularProgressIndicator(Modifier.size(24.dp))
+                } else {
+                    Button(onClick = if (isConnected) onDisconnect else onConnect) {
+                        Text(if (isConnected) "Desconectar" else "Conectar")
                     }
-                    Text("Conectar", color = Color.White)
                 }
             }
         }

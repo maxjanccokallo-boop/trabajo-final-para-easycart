@@ -38,11 +38,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.easycart.di.AppModule
 import com.example.easycart.viewmodel.LedState
 import com.example.easycart.viewmodel.MainViewModel
-import com.example.easycart.viewmodel.MainViewModelFactory
 import com.example.easycart.viewmodel.ScanEntry
 import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.common.InputImage
@@ -69,7 +66,7 @@ private val ScreenBg = Brush.verticalGradient(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ScanScreen(
-    viewModel: MainViewModel = viewModel(factory = MainViewModelFactory(AppModule.repo)),
+    viewModel: MainViewModel,
     onScanSuccess: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()

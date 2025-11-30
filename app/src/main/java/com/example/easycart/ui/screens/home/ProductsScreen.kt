@@ -33,11 +33,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.easycart.data.model.Product
-import com.example.easycart.di.AppModule
 import com.example.easycart.viewmodel.MainViewModel
-import com.example.easycart.viewmodel.MainViewModelFactory
 import kotlin.math.roundToInt
 
 
@@ -64,9 +61,7 @@ private enum class SortMode(val label: String) {
 }
 
 @Composable
-fun ProductsScreen(
-    viewModel: MainViewModel = viewModel(factory = MainViewModelFactory(AppModule.repo))
-) {
+fun ProductsScreen(viewModel: MainViewModel) {
     val uiState by viewModel.uiState.collectAsState()
 
     var search by remember { mutableStateOf(TextFieldValue("")) }

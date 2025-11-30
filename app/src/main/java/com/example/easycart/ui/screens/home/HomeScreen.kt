@@ -10,22 +10,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.easycart.ui.navigation.BottomTab
 import com.example.easycart.ui.components.EasyCartBottomBar
 import com.example.easycart.ui.theme.GreenPrimary
 import com.example.easycart.viewmodel.MainViewModel
 import com.example.easycart.viewmodel.LedState
-import com.example.easycart.di.AppModule
-import com.example.easycart.viewmodel.MainViewModelFactory
 
 @Composable
 fun HomeScreen(
     navController: NavController,
-    viewModel: MainViewModel = viewModel(
-        factory = MainViewModelFactory(AppModule.repo)
-    ),
+    viewModel: MainViewModel,
     onLogout: () -> Unit
 ) {
     // ⭐ Control de la pestaña seleccionada
@@ -141,7 +136,7 @@ fun HomeScreen(
                         OffersScreen(viewModel)
 
                     BottomTab.Bluetooth ->
-                        BluetoothScreen()
+                        BluetoothScreen(mainViewModel = viewModel)
 
                     BottomTab.Profile ->
                         ProfileScreen(

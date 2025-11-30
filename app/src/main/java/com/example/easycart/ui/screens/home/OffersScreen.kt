@@ -30,13 +30,10 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.rememberAsyncImagePainter
 import com.example.easycart.R
 import com.example.easycart.data.model.Product
-import com.example.easycart.di.AppModule
 import com.example.easycart.viewmodel.MainViewModel
-import com.example.easycart.viewmodel.MainViewModelFactory
 import kotlin.math.roundToInt
 
 // -------------------------
@@ -76,11 +73,7 @@ private fun getColumnCount(): Int {
 // PANTALLA COMPLETA
 // -------------------------
 @Composable
-fun OffersScreen(
-    viewModel: MainViewModel = viewModel(
-        factory = MainViewModelFactory(AppModule.repo)
-    )
-) {
+fun OffersScreen(viewModel: MainViewModel) {
     val uiState by viewModel.uiState.collectAsState()
 
     val productsWithOffers = remember(uiState.products) {

@@ -28,7 +28,7 @@ class BluetoothService(private val context: Context) {
             try {
                 _connected.emit(false)
 
-                val adapter = BluetoothAdapter. getDefaultAdapter()
+                val adapter = BluetoothAdapter.getDefaultAdapter()
                 val device = adapter.getRemoteDevice(address)
 
                 bluetoothSocket =
@@ -37,7 +37,7 @@ class BluetoothService(private val context: Context) {
                 adapter.cancelDiscovery()
                 bluetoothSocket!!.connect()
 
-                _connected.emit(true)   
+                _connected.emit(true)
 
                 listenForData()
 
@@ -52,6 +52,9 @@ class BluetoothService(private val context: Context) {
         scope.launch {
             try {
                 bluetoothSocket?.outputStream?.write(data.toByteArray())
+                if (data.startsWith("SI")) {
+                    Log.d("BT", "Enviado SI al Arduino")
+                }
             } catch (e: IOException) {
                 Log.e("BluetoothService", "Error enviando datos: ${e.message}")
             }

@@ -1,22 +1,27 @@
 package com.example.easycart.viewmodel
 
-import android.app.Application
-import androidx.lifecycle.AndroidViewModel
-import com.example.easycart.bluetooth.BluetoothService
-import kotlinx.coroutines.flow.StateFlow
+import android.util.Log
+import androidx.lifecycle.ViewModel
+import com.example.easycart.di.AppModule
 
-class BluetoothViewModel(app: Application) : AndroidViewModel(app) {
+class BluetoothViewModel : ViewModel() {
 
-    private val service = BluetoothService(app)
-
-    val connected: StateFlow<Boolean> = service.connected
-    val receivedData: StateFlow<String> = service.receivedData
-
-    fun connect(address: String, onError: (String) -> Unit) {
-        service.connect(address, onError)
+    fun connectToDevice(address: String, onFinish: (String?) -> Unit) {
+        Log.d("BT_FLOW", "UI solicita conexión con $address")
+        AppModule.bluetoothService.connect(address) { err ->
+            Log.e("BT_FLOW", "Error conectando: $err")
+            onFinish(err)
+        }
     }
 
-    fun disconnect() = service.disconnect()
+    fun disconnect() {
+        Log.d("BT_FLOW", "UI solicita desconexión.")
+        AppModule.bluetoothService.disconnect()
+    }
 
-    fun send(msg: String) = service.sendData(msg)
+    fun refreshState() {
+        Log.d("BT_FLOW", "Estado refrescado")
+        // En el futuro, aquí podrías forzar la actualización del estado de la UI
+        // si el StateFlow del servicio no se recompone automáticamente.
+    }
 }
