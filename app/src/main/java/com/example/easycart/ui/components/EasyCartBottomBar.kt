@@ -26,7 +26,7 @@ fun EasyCartBottomBar(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .background(Color(0xFFF3EDF7)) // 🎨 Color pastel bonito
+            .background(Color(0xFFF3EDF7))
             .padding(vertical = 8.dp)
     ) {
 
@@ -42,19 +42,16 @@ fun EasyCartBottomBar(
 
                 val isSelected = selectedTab == tab
 
-                // ⭐ ESCALA SUAVE
                 val scale by animateFloatAsState(
                     targetValue = if (isSelected) 1.10f else 1f,
                     label = "scaleAnim"
                 )
 
-                // ⭐ COLOR del círculo
                 val circleColor by animateColorAsState(
                     targetValue = if (isSelected) Color(0xFFE5D9FF) else Color.Transparent,
                     label = "colorAnim"
                 )
 
-                // ⭐ COLOR del ícono
                 val iconColor by animateColorAsState(
                     targetValue = if (isSelected) Color(0xFF5E35B1) else Color(0xFF555555),
                     label = "iconColorAnim"
@@ -63,16 +60,15 @@ fun EasyCartBottomBar(
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier
-                        .weight(1f) // ⭐ DISTRIBUCIÓN RESPONSIVE
+                        .weight(1f)
                         .scale(scale)
                         .clickable { onTabSelected(tab) }
                         .padding(vertical = 4.dp)
                 ) {
 
-                    // ⭐ Contenedor circular (bonito)
                     Box(
                         modifier = Modifier
-                            .size(42.dp) // ⭐ Tamaño ideal para móvil real
+                            .size(42.dp)
                             .background(circleColor, CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
@@ -86,7 +82,6 @@ fun EasyCartBottomBar(
 
                     Spacer(Modifier.height(4.dp))
 
-                    // ⭐ Texto
                     Text(
                         text = tab.label,
                         style = MaterialTheme.typography.labelSmall,

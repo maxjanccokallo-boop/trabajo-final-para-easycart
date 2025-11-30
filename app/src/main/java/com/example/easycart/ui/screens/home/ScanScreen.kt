@@ -15,7 +15,10 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ExperimentalAnimationApi
-import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.core.EaseInOutSine
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
@@ -24,10 +27,7 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -62,7 +62,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
-import com.example.easycart.viewmodel.LedState
 import com.example.easycart.viewmodel.MainViewModel
 import com.example.easycart.viewmodel.ScanEntry
 import com.google.mlkit.vision.barcode.BarcodeScanning
@@ -70,11 +69,6 @@ import com.google.mlkit.vision.common.InputImage
 import java.text.SimpleDateFormat
 import java.util.*
 import kotlin.math.roundToInt
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.shrinkVertically
-
 
 const val FIXED_BARCODE_LENGTH = 12
 
@@ -173,7 +167,7 @@ fun ScanScreen(
         // ======================================================
         AnimatedVisibility(
             visible = appear,
-            enter = fadeIn(tween(500)) + slideInVertically(tween(500), initialOffsetY = { it / 2 })
+            enter = fadeIn(tween(500)) + slideInVertically(initialOffsetY = { it / 2 })
         ) {
             ScanHeaderCard(
                 today = todayScans,
@@ -191,7 +185,7 @@ fun ScanScreen(
         // ======================================================
         AnimatedVisibility(
             visible = appear,
-            enter = fadeIn(tween(650)) + slideInVertically(tween(650), initialOffsetY = { it / 2 })
+            enter = fadeIn(tween(650)) + slideInVertically(initialOffsetY = { it / 2 })
         ) {
             SectionCardPro(
                 icon = Icons.Default.CameraAlt,
@@ -309,7 +303,7 @@ fun ScanScreen(
         // ======================================================
         AnimatedVisibility(
             visible = appear,
-            enter = fadeIn(tween(600)) + slideInVertically(tween(600), initialOffsetY = { it / 2 })
+            enter = fadeIn(tween(600)) + slideInVertically(initialOffsetY = { it / 2 })
         ) {
             ConnectionsCard(
                 usbConnected = null,
@@ -323,7 +317,7 @@ fun ScanScreen(
         // ======================================================
         AnimatedVisibility(
             visible = appear,
-            enter = fadeIn(tween(700)) + slideInVertically(tween(700), initialOffsetY = { it / 2 })
+            enter = fadeIn(tween(700)) + slideInVertically(initialOffsetY = { it / 2 })
         ) {
             SectionCardPro(
                 icon = Icons.Default.Usb,
@@ -450,47 +444,6 @@ fun ScanScreen(
                     )
                 ) {
                     Text("Limpiar historial")
-                }
-            }
-        }
-
-        // ======================================================
-        // ✅ 5) ESTADO LED
-        // ======================================================
-        val ledColor by animateColorAsState(
-            targetValue = when (uiState.ledState) {
-                LedState.GREEN -> Color(0xFF22C55E)
-                LedState.RED -> Color(0xFFEF4444)
-                LedState.YELLOW -> Color(0xFFF59E0B)
-            },
-            animationSpec = tween(450),
-            label = "ledAnim"
-        )
-
-        AnimatedVisibility(
-            visible = appear,
-            enter = fadeIn(tween(800)) + slideInVertically(tween(800), initialOffsetY = { it / 2 })
-        ) {
-            SectionCardPro(
-                icon = Icons.Default.Settings,
-                title = "Estado LED",
-                subtitle = "Conexión del carrito",
-                isDarkMode = isDarkMode
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    Box(
-                        Modifier
-                            .size(18.dp)
-                            .background(ledColor, CircleShape)
-                    )
-                    Text(
-                        uiState.ledState.name,
-                        fontWeight = FontWeight.Bold,
-                        color = if (isDarkMode) Color.White else Color.Black
-                    )
                 }
             }
         }
@@ -644,7 +597,7 @@ private fun ScanHeaderCard(
                                 )
                                 Spacer(Modifier.width(6.dp))
                                 Text(
-                                    "Sistema operativo",
+                                    "Sistema operativo • $currentLanguage",
                                     color = Color.White.copy(alpha = 0.9f),
                                     style = MaterialTheme.typography.bodySmall
                                 )
