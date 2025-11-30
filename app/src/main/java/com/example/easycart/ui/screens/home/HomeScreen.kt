@@ -4,7 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Brightness6
+import androidx.compose.material.icons.filled.Brightness4
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -18,132 +18,126 @@ import com.example.easycart.ui.navigation.BottomTab
 import com.example.easycart.ui.components.EasyCartBottomBar
 import com.example.easycart.viewmodel.MainViewModel
 
+// Colores del header
+private val DarkHeader = Color(0xFF0F172A)
+private val LightHeader = Color(0xFFF1F5F9)
+
 @Composable
 fun HomeScreen(
     navController: NavController,
     viewModel: MainViewModel,
+    darkMode: Boolean,
+    onToggleTheme: () -> Unit,
     onLogout: () -> Unit
 ) {
     var selectedTab by remember { mutableStateOf(BottomTab.Scan) }
     val uiState by viewModel.uiState.collectAsState()
-    val isDark = viewModel.darkTheme.value
 
-    // Nombre real
-    val displayName = uiState.user?.displayName
-        ?: uiState.user?.email?.substringBefore("@")
-        ?: "Usuario"
+    // Sacamos el nombre ANTES del @
+    val userEmail = uiState.user?.email ?: "usuario"
+    val extractedName = userEmail.substringBefore("@")
 
-    // Colores según tema
-    val backgroundColor = if (isDark) Color(0xFF0F172A) else Color(0xFFF5F7FB)
-    val topBarColor = if (isDark) Color(0xFF0F172A) else Color(0xFFE8EAF2)
-    val textPrimary = if (isDark) Color.White else Color(0xFF1E1E1E)
-    val textSecondary = if (isDark) Color(0xFF10B981) else Color(0xFF0D9488)
+    val headerColor = if (darkMode) DarkHeader else LightHeader
+    val textColor = if (darkMode) Color.White else Color.Black
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(backgroundColor)
-    ) {
+    Scaffold(
+        topBar = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(headerColor)
+                    .shadow(6.dp)
+                    .padding(horizontal = 16.dp, vertical = 14.dp)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
 
-        Scaffold(
-            containerColor = Color.Transparent,
-            bottomBar = {
-                EasyCartBottomBar(
-                    selectedTab = selectedTab,
-                    onTabSelected = { selectedTab = it }
-                )
-            },
-            topBar = {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(topBarColor)
-                        .shadow(4.dp)
-                        .padding(horizontal = 16.dp, vertical = 14.dp)
-                ) {
+                    // Avatar redondo con inicial
+                    Box(
+                        modifier = Modifier
+                            .size(42.dp)
+                            .background(Color(0xFF10B981), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = extractedName.first().uppercase(),
+                            color = Color.White,
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                    }
 
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                    Spacer(Modifier.width(12.dp))
 
-                        // Avatar
-                        Box(
-                            modifier = Modifier
-                                .size(40.dp)
-                                .background(Color(0xFF14B8A6), CircleShape),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = displayName.first().uppercase(),
-                                color = Color.White,
-                                style = MaterialTheme.typography.titleMedium
-                            )
-                        }
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            extractedName,
+                            color = textColor,
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                        Text(
+                            "• Sistema operativo",
+                            color = Color(0xFF34D399),
+                            style = MaterialTheme.typography.labelSmall
+                        )
+                    }
 
-                        Spacer(Modifier.width(12.dp))
+                    // Botón para cambiar tema
+                    IconButton(onClick = onToggleTheme) {
+                        Icon(Icons.Default.Brightness4, contentDescription = null, tint = textColor)
+                    }
 
-                        // Nombre + estado
-                        Column(Modifier.weight(1f)) {
-                            Text(
-                                text = displayName,
-                                color = textPrimary,
-                                style = MaterialTheme.typography.titleMedium
-                            )
-                            Text(
-                                text = "• Sistema operativo",
-                                color = textSecondary,
-                                style = MaterialTheme.typography.bodySmall
-                            )
-                        }
-
-                        // BOTÓN: CAMBIO TEMA
-                        IconButton(onClick = { viewModel.toggleTheme() }) {
-                            Icon(
-                                imageVector = Icons.Default.Brightness6,
-                                tint = textPrimary,
-                                contentDescription = "Cambiar Tema"
-                            )
-                        }
-
-                        // BOTÓN: CONFIGURACIÓN
-                        IconButton(onClick = {
-                            navController.navigate("profile") // O tu ruta real
-                        }) {
-                            Icon(
-                                imageVector = Icons.Default.Settings,
-                                tint = textPrimary,
-                                contentDescription = "Configuración"
-                            )
-                        }
+                    // Botón ajustes
+                    IconButton(onClick = { /* abrir ajustes aquí */ }) {
+                        Icon(Icons.Default.Settings, contentDescription = null, tint = textColor)
                     }
                 }
             }
-        ) { padding ->
+        },
 
-            Box(
-                modifier = Modifier
-                    .padding(padding)
-                    .fillMaxSize()
-            ) {
+        // BOTTOM BAR
+        bottomBar = {
+            EasyCartBottomBar(
+                selectedTab = selectedTab,
+                onTabSelected = { selectedTab = it }
+            )
+        }
+    ) { padding ->
 
-                when (selectedTab) {
-                    BottomTab.Scan -> ScanScreen(viewModel) {
-                        selectedTab = BottomTab.Cart
-                    }
+        Box(
+            modifier = Modifier
+                .padding(padding)
+                .fillMaxSize()
+        ) {
 
-                    BottomTab.Cart ->
-                        CartScreen(viewModel, navController)
+            // 🔥 CAMBIO DE TABS 100% compatible
+            when (selectedTab) {
 
-                    BottomTab.Products ->
-                        ProductsScreen(viewModel)
+                BottomTab.Scan ->
+                    ScanScreen(
+                        viewModel = viewModel,
+                        onScanSuccess = { selectedTab = BottomTab.Cart },
+                        darkMode = darkMode   // ← AQUI le enviamos el modo real
+                    )
 
-                    BottomTab.Offers ->
-                        OffersScreen(viewModel)
+                BottomTab.Cart ->
+                    CartScreen(
+                        viewModel = viewModel,
+                        navController = navController
+                    )
 
-                    BottomTab.Bluetooth ->
-                        BluetoothScreen(mainViewModel = viewModel)
+                BottomTab.Products ->
+                    ProductsScreen(viewModel)
 
-                    BottomTab.Profile ->
-                        ProfileScreen(viewModel = viewModel, onLogout = onLogout)
-                }
+                BottomTab.Offers ->
+                    OffersScreen(viewModel)
+
+                BottomTab.Bluetooth ->
+                    BluetoothScreen(mainViewModel = viewModel)
+
+                BottomTab.Profile ->
+                    ProfileScreen(
+                        viewModel = viewModel,
+                        onLogout = onLogout
+                    )
             }
         }
     }

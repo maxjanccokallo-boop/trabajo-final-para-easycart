@@ -45,9 +45,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -69,25 +66,30 @@ import com.google.mlkit.vision.common.InputImage
 import java.text.SimpleDateFormat
 import java.util.*
 import kotlin.math.roundToInt
+import androidx.compose.ui.draw.shadow
+
+import androidx.compose.ui.focus.focusRequester
+
 
 const val FIXED_BARCODE_LENGTH = 12
 
-// ================================
-// 🎨 PALETA LIGHT / DARK
-// ================================
-private val LightHeaderGradient = Brush.horizontalGradient(
-    listOf(Color(0xFF4A64F0), Color(0xFF8B5CF6))
-)
-private val DarkHeaderGradient = Brush.verticalGradient(
-    listOf(Color(0xFF111827), Color(0xFF020617))
-)
+// ===============================
+// 🎨 PALETA OFICIAL EASY CART
+// ===============================
+object EasyCartColors {
+    val DarkHeader = Color(0xFF0F172A)
+    val LightHeader = Color(0xFFF1F5F9)
 
-private val LightScreenBg = Brush.verticalGradient(
-    listOf(Color(0xFFF7F6FB), Color(0xFFF1ECFF))
-)
-private val DarkScreenBg = Brush.verticalGradient(
-    listOf(Color(0xFF020617), Color(0xFF020617))
-)
+    val DarkBackground = Color(0xFF020617)
+    val LightBackground = Color(0xFFF7F6FB)
+
+    val AccentGreen = Color(0xFF10B981)
+    val AccentBlue = Color(0xFF4F46E5)
+    val AccentPurple = Color(0xFF7B61FF)
+
+    val DarkText = Color.White
+    val LightText = Color.Black
+}
 
 // ================================
 // ⭐ PANTALLA PRINCIPAL
@@ -96,7 +98,8 @@ private val DarkScreenBg = Brush.verticalGradient(
 @Composable
 fun ScanScreen(
     viewModel: MainViewModel,
-    onScanSuccess: () -> Unit
+    onScanSuccess: () -> Unit,
+    darkMode: Boolean
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
@@ -105,39 +108,34 @@ fun ScanScreen(
     var torchEnabled by remember { mutableStateOf(false) }
     var torchSupported by remember { mutableStateOf(false) }
 
-    // ⚙️ Settings Sheet
     var showSettings by rememberSaveable { mutableStateOf(false) }
     val settingsSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
-    // Configs locales
     var soundEnabled by rememberSaveable { mutableStateOf(true) }
     var hapticEnabled by rememberSaveable { mutableStateOf(true) }
     var accept13Digits by rememberSaveable { mutableStateOf(false) }
 
-    // Tema claro / oscuro (empieza en oscuro como la captura)
-    var isDarkMode by rememberSaveable { mutableStateOf(true) }
+    val currentLanguage = "Español"
 
-    // Idioma (solo visual)
-    var currentLanguage by rememberSaveable { mutableStateOf("Español") }
-
-    val focusRequester = remember { FocusRequester() }
+    val focusRequester = remember { androidx.compose.ui.focus.FocusRequester() }
     val haptic = LocalHapticFeedback.current
 
     LaunchedEffect(Unit) { focusRequester.requestFocus() }
 
-    // animación entrada
     var appear by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { appear = true }
 
-    // Responsive simple
     val widthDp = LocalConfiguration.current.screenWidthDp
     val horizontalPad = if (widthDp < 400) 12.dp else 16.dp
 
-    // Fondo según tema
-    val screenBg = if (isDarkMode) DarkScreenBg else LightScreenBg
+    // FONDO OFICIAL
+    val screenBg = if (darkMode)
+        Brush.verticalGradient(listOf(EasyCartColors.DarkBackground, EasyCartColors.DarkBackground))
+    else
+        Brush.verticalGradient(listOf(EasyCartColors.LightBackground, EasyCartColors.LightBackground))
 
     // ======================================================
-    // ✅ MÉTRICAS REALES
+    // 📊 MÉTRICAS
     // ======================================================
     val history = uiState.scanHistory
     val totalScans = history.size
@@ -163,7 +161,7 @@ fun ScanScreen(
     ) {
 
         // ======================================================
-        // ✅ HEADER PRO + ⚙️ + botón tema
+        // HEADER
         // ======================================================
         AnimatedVisibility(
             visible = appear,
@@ -173,15 +171,15 @@ fun ScanScreen(
                 today = todayScans,
                 total = totalScans,
                 successRate = successRate,
-                isDarkMode = isDarkMode,
+                darkMode = darkMode,
                 currentLanguage = currentLanguage,
-                onToggleTheme = { isDarkMode = !isDarkMode },
+                onToggleTheme = { /* El tema ahora viene desde HomeScreen */ },
                 onSettingsClick = { showSettings = true }
             )
         }
 
         // ======================================================
-        // ✅ 1) ESCÁNER POR CÁMARA (PRIMERO)
+        // ESCÁNER POR CÁMARA
         // ======================================================
         AnimatedVisibility(
             visible = appear,
@@ -191,7 +189,7 @@ fun ScanScreen(
                 icon = Icons.Default.CameraAlt,
                 title = "Escáner por cámara",
                 subtitle = "Usa la cámara de tu dispositivo",
-                isDarkMode = isDarkMode
+                darkMode = darkMode
             ) {
 
                 val pulseInf = rememberInfiniteTransition(label = "pulse")
@@ -205,7 +203,8 @@ fun ScanScreen(
                     label = "pulseScale"
                 )
 
-                val camButtonColor = if (isDarkMode) Color(0xFF4F46E5) else Color(0xFF1976D2)
+                val camButtonColor =
+                    if (darkMode) EasyCartColors.AccentBlue else EasyCartColors.AccentPurple
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -234,7 +233,7 @@ fun ScanScreen(
                             modifier = Modifier
                                 .size(56.dp)
                                 .clip(RoundedCornerShape(14.dp))
-                                .background(if (isDarkMode) Color(0xFF020617) else Color(0xFF111827))
+                                .background(if (darkMode) EasyCartColors.DarkBackground else EasyCartColors.LightHeader)
                         ) {
                             Icon(
                                 imageVector = if (torchEnabled) Icons.Default.FlashOn else Icons.Default.FlashOff,
@@ -286,7 +285,7 @@ fun ScanScreen(
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(14.dp),
                             colors = ButtonDefaults.outlinedButtonColors(
-                                contentColor = if (isDarkMode) Color(0xFFE5E7EB) else Color.Black
+                                contentColor = if (darkMode) EasyCartColors.DarkText else EasyCartColors.LightText
                             )
                         ) {
                             Icon(Icons.Default.Close, contentDescription = null)
@@ -299,7 +298,7 @@ fun ScanScreen(
         }
 
         // ======================================================
-        // ✅ 2) ESTADO DE CONEXIONES
+        // ESTADO DE CONEXIONES
         // ======================================================
         AnimatedVisibility(
             visible = appear,
@@ -308,12 +307,12 @@ fun ScanScreen(
             ConnectionsCard(
                 usbConnected = null,
                 btConnected = null,
-                isDarkMode = isDarkMode
+                darkMode = darkMode
             )
         }
 
         // ======================================================
-        // ✅ 3) ESCÁNER USB
+        // ESCÁNER USB
         // ======================================================
         AnimatedVisibility(
             visible = appear,
@@ -323,10 +322,13 @@ fun ScanScreen(
                 icon = Icons.Default.Usb,
                 title = "Escáner USB",
                 subtitle = "Usa tu pistola de escaneo",
-                isDarkMode = isDarkMode
+                darkMode = darkMode
             ) {
-                val textFieldBg = if (isDarkMode) Color(0xFF020617) else Color(0xFFF1F0FF)
-                val textColor = if (isDarkMode) Color.White else Color.Black
+                val textFieldBg =
+                    if (darkMode) EasyCartColors.DarkHeader else EasyCartColors.LightHeader
+
+                val textColor =
+                    if (darkMode) EasyCartColors.DarkText else EasyCartColors.LightText
 
                 TextField(
                     value = scannedText,
@@ -353,13 +355,13 @@ fun ScanScreen(
                     label = {
                         Text(
                             "Escanea o ingresa código...",
-                            color = if (isDarkMode) Color(0xFF9CA3AF) else Color.Gray
+                            color = if (darkMode) Color(0xFF9CA3AF) else Color.Gray
                         )
                     },
                     placeholder = {
                         Text(
                             "Esperando escaneo...",
-                            color = if (isDarkMode) Color(0xFF6B7280) else Color.Gray
+                            color = if (darkMode) Color(0xFF6B7280) else Color.Gray
                         )
                     },
                     singleLine = true,
@@ -378,15 +380,15 @@ fun ScanScreen(
                         unfocusedIndicatorColor = Color.Transparent,
                         focusedTextColor = textColor,
                         unfocusedTextColor = textColor,
-                        cursorColor = if (isDarkMode) Color(0xFF60A5FA) else Color(0xFF4A64F0)
+                        cursorColor = EasyCartColors.AccentBlue
                     )
                 )
 
                 Spacer(Modifier.height(10.dp))
 
                 val usbButtonBg =
-                    if (isDarkMode) Color(0xFF020617) else Color(0xFF7B61FF).copy(alpha = 0.15f)
-                val usbTextColor = if (isDarkMode) Color(0xFF818CF8) else Color(0xFF7B61FF)
+                    if (darkMode) EasyCartColors.DarkHeader else EasyCartColors.LightHeader
+                val usbTextColor = if (darkMode) EasyCartColors.AccentPurple else EasyCartColors.AccentBlue
 
                 Button(
                     onClick = { /* acción futura */ },
@@ -406,29 +408,29 @@ fun ScanScreen(
         }
 
         // ======================================================
-        // ✅ 4) HISTORIAL DE ESCANEOS
+        // HISTORIAL
         // ======================================================
         SectionCardPro(
             icon = Icons.Default.History,
             title = "Historial de escaneos",
             subtitle = "Últimos códigos leídos",
-            isDarkMode = isDarkMode
+            darkMode = darkMode
         ) {
             if (history.isEmpty()) {
                 Text(
                     "No hay escaneos aún",
-                    color = if (isDarkMode) Color(0xFF9CA3AF) else Color.Gray
+                    color = if (darkMode) Color(0xFF9CA3AF) else Color.Gray
                 )
             } else {
                 history.take(15).forEach { entry ->
-                    HistoryRow(entry, isDarkMode)
+                    HistoryRow(entry, darkMode)
                     Spacer(Modifier.height(8.dp))
                 }
 
                 if (history.size > 15) {
                     Text(
                         "Mostrando 15 de ${history.size}",
-                        color = if (isDarkMode) Color(0xFF9CA3AF) else Color.Gray,
+                        color = if (darkMode) Color(0xFF9CA3AF) else Color.Gray,
                         style = MaterialTheme.typography.bodySmall
                     )
                 }
@@ -440,7 +442,7 @@ fun ScanScreen(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = if (isDarkMode) Color(0xFFE5E7EB) else Color.Black
+                        contentColor = if (darkMode) EasyCartColors.DarkText else EasyCartColors.LightText
                     )
                 ) {
                     Text("Limpiar historial")
@@ -450,13 +452,13 @@ fun ScanScreen(
     }
 
     // ======================================================
-    // ✅ SETTINGS SHEET FUNCIONAL (⚙️)
+    // SETTINGS SHEET
     // ======================================================
     if (showSettings) {
         ModalBottomSheet(
             onDismissRequest = { showSettings = false },
             sheetState = settingsSheetState,
-            containerColor = if (isDarkMode) Color(0xFF020617) else Color.White
+            containerColor = if (darkMode) EasyCartColors.DarkHeader else Color.White
         ) {
             Column(
                 Modifier
@@ -468,35 +470,13 @@ fun ScanScreen(
                     "Configuración",
                     fontWeight = FontWeight.Bold,
                     style = MaterialTheme.typography.titleMedium,
-                    color = if (isDarkMode) Color.White else Color.Black
+                    color = if (darkMode) EasyCartColors.DarkText else EasyCartColors.LightText
                 )
-
-                // Idioma
-                Text(
-                    "Idioma de la app",
-                    fontWeight = FontWeight.SemiBold,
-                    color = if (isDarkMode) Color(0xFFE5E7EB) else Color.Black
-                )
-
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    FilterChip(
-                        selected = currentLanguage == "Español",
-                        onClick = { currentLanguage = "Español" },
-                        label = { Text("Español") }
-                    )
-                    FilterChip(
-                        selected = currentLanguage == "English",
-                        onClick = { currentLanguage = "English" },
-                        label = { Text("English") }
-                    )
-                }
-
-                Divider(Modifier.padding(vertical = 8.dp))
 
                 Text(
                     "Preferencias de escaneo",
                     fontWeight = FontWeight.SemiBold,
-                    color = if (isDarkMode) Color(0xFFE5E7EB) else Color.Black
+                    color = if (darkMode) EasyCartColors.DarkText else EasyCartColors.LightText
                 )
 
                 SettingSwitch(
@@ -534,19 +514,22 @@ fun ScanScreen(
 }
 
 // ======================================================
-// ✅ HEADER PRO
+// HEADER PRO
 // ======================================================
 @Composable
 private fun ScanHeaderCard(
     today: Int,
     total: Int,
     successRate: Int,
-    isDarkMode: Boolean,
+    darkMode: Boolean,
     currentLanguage: String,
     onToggleTheme: () -> Unit,
     onSettingsClick: () -> Unit
 ) {
-    val gradient = if (isDarkMode) DarkHeaderGradient else LightHeaderGradient
+    val gradient = if (darkMode)
+        Brush.verticalGradient(listOf(EasyCartColors.DarkHeader, EasyCartColors.DarkHeader))
+    else
+        Brush.horizontalGradient(listOf(EasyCartColors.AccentBlue, EasyCartColors.AccentPurple))
 
     Card(
         modifier = Modifier
@@ -563,7 +546,6 @@ private fun ScanHeaderCard(
             Column {
                 Row(verticalAlignment = Alignment.CenterVertically) {
 
-                    // Avatar + nombre + estado
                     Row(
                         modifier = Modifier.weight(1f),
                         verticalAlignment = Alignment.CenterVertically
@@ -572,7 +554,7 @@ private fun ScanHeaderCard(
                             modifier = Modifier
                                 .size(34.dp)
                                 .clip(CircleShape)
-                                .background(Color(0xFF22C55E)),
+                                .background(EasyCartColors.AccentGreen),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
@@ -584,7 +566,7 @@ private fun ScanHeaderCard(
                         Spacer(Modifier.width(10.dp))
                         Column {
                             Text(
-                                "Juan Pérez",
+                                "Usuario",
                                 color = Color.White,
                                 fontWeight = FontWeight.SemiBold,
                                 style = MaterialTheme.typography.titleMedium
@@ -605,13 +587,11 @@ private fun ScanHeaderCard(
                         }
                     }
 
-                    // Botón tema claro / oscuro
                     HeaderIconButton(
-                        icon = if (isDarkMode) Icons.Default.LightMode else Icons.Default.DarkMode,
+                        icon = Icons.Default.LightMode,
                         onClick = onToggleTheme
                     )
                     Spacer(Modifier.width(8.dp))
-                    // Botón settings (idioma + opciones)
                     HeaderIconButton(Icons.Default.Settings, onClick = onSettingsClick)
                 }
 
@@ -683,26 +663,26 @@ fun MiniStatCard(
 }
 
 // ======================================================
-// ✅ HISTORIAL UI
+// HISTORIAL
 // ======================================================
 @Composable
-private fun HistoryRow(entry: ScanEntry, isDarkMode: Boolean) {
+private fun HistoryRow(entry: ScanEntry, darkMode: Boolean) {
     val dateFmt = remember { SimpleDateFormat("HH:mm:ss", Locale.getDefault()) }
     val time = dateFmt.format(Date(entry.timestamp))
 
     val bg = if (entry.success) {
-        if (isDarkMode) Color(0xFF052E16) else Color(0xFFE8FFF0)
+        if (darkMode) Color(0xFF052E16) else Color(0xFFE8FFF0)
     } else {
-        if (isDarkMode) Color(0xFF450A0A) else Color(0xFFFFE6E6)
+        if (darkMode) Color(0xFF450A0A) else Color(0xFFFFE6E6)
     }
 
     val fg = if (entry.success) {
-        if (isDarkMode) Color(0xFF6EE7B7) else Color(0xFF2E7D32)
+        if (darkMode) Color(0xFF6EE7B7) else Color(0xFF2E7D32)
     } else {
-        if (isDarkMode) Color(0xFFFCA5A5) else Color(0xFFD32F2F)
+        if (darkMode) Color(0xFFFCA5A5) else Color(0xFFD32F2F)
     }
 
-    val secondary = if (isDarkMode) Color(0xFF9CA3AF) else Color.Gray
+    val secondary = if (darkMode) Color(0xFF9CA3AF) else Color.Gray
 
     Row(
         Modifier
@@ -724,7 +704,7 @@ private fun HistoryRow(entry: ScanEntry, isDarkMode: Boolean) {
                 fontWeight = FontWeight.SemiBold,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                color = Color.White
+                color = if (darkMode) Color.White else Color.Black
             )
             Text(
                 "Código: ${entry.barcode}",
@@ -738,23 +718,23 @@ private fun HistoryRow(entry: ScanEntry, isDarkMode: Boolean) {
 }
 
 // ======================================================
-// ✅ CONEXIONES (VISUAL)
+// CONEXIONES
 // ======================================================
 @Composable
 private fun ConnectionsCard(
     usbConnected: Boolean?,
     btConnected: Boolean?,
-    isDarkMode: Boolean
+    darkMode: Boolean
 ) {
     SectionCardPro(
         icon = Icons.Default.Wifi,
         title = "Estado de Conexiones",
         subtitle = "Dispositivos conectados",
-        isDarkMode = isDarkMode
+        darkMode = darkMode
     ) {
-        ConnectionRow(Icons.Default.Usb, "Escáner USB", usbConnected, isDarkMode)
+        ConnectionRow(Icons.Default.Usb, "Escáner USB", usbConnected, darkMode)
         Spacer(Modifier.height(8.dp))
-        ConnectionRow(Icons.Default.Bluetooth, "Bluetooth", btConnected, isDarkMode)
+        ConnectionRow(Icons.Default.Bluetooth, "Bluetooth", btConnected, darkMode)
     }
 }
 
@@ -763,7 +743,7 @@ private fun ConnectionRow(
     icon: ImageVector,
     label: String,
     connected: Boolean?,
-    isDarkMode: Boolean
+    darkMode: Boolean
 ) {
     val (dotColor, statusText, statusColor) = when (connected) {
         true -> Triple(Color(0xFF22C55E), "Conectado", Color(0xFF4ADE80))
@@ -771,8 +751,9 @@ private fun ConnectionRow(
         null -> Triple(Color(0xFF9CA3AF), "Sin información", Color(0xFF9CA3AF))
     }
 
-    val iconBg = if (isDarkMode) Color(0xFF020617) else Color(0xFFF3F4F6)
-    val labelColor = if (isDarkMode) Color.White else Color.Black
+    val iconBg =
+        if (darkMode) EasyCartColors.DarkHeader else EasyCartColors.LightHeader
+    val labelColor = if (darkMode) EasyCartColors.DarkText else EasyCartColors.LightText
 
     Row(
         Modifier.fillMaxWidth(),
@@ -785,12 +766,12 @@ private fun ConnectionRow(
                 .background(iconBg),
             contentAlignment = Alignment.Center
         ) {
-            Icon(icon, null, tint = if (isDarkMode) Color(0xFF38BDF8) else Color(0xFF111827))
+            Icon(icon, null, tint = if (darkMode) EasyCartColors.AccentBlue else EasyCartColors.LightText)
         }
 
         Spacer(Modifier.width(10.dp))
 
-        Text(label, Modifier.weight(1f), fontWeight = FontWeight.Medium, color = labelColor)
+        Text(label, modifier = Modifier.weight(1f), color = labelColor)
 
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(
@@ -805,14 +786,14 @@ private fun ConnectionRow(
 }
 
 // ======================================================
-// ✅ SECTION CARD PRO
+// SECTION CARD PRO
 // ======================================================
 @Composable
 fun SectionCardPro(
     icon: ImageVector,
     title: String,
     subtitle: String? = null,
-    isDarkMode: Boolean,
+    darkMode: Boolean,
     content: @Composable ColumnScope.() -> Unit
 ) {
     val elev by animateDpAsState(
@@ -821,11 +802,11 @@ fun SectionCardPro(
         label = "cardElev"
     )
 
-    val cardColor = if (isDarkMode) Color(0xFF0F172A) else Color.White
-    val iconBg = if (isDarkMode) Color(0xFF020617) else Color(0xFFF3F0FF)
-    val iconTint = if (isDarkMode) Color(0xFF6366F1) else Color(0xFF7B61FF)
-    val titleColor = if (isDarkMode) Color.White else Color.Black
-    val subtitleColor = if (isDarkMode) Color(0xFF9CA3AF) else Color.Gray
+    val cardColor = if (darkMode) EasyCartColors.DarkHeader else Color.White
+    val iconBg = if (darkMode) EasyCartColors.DarkBackground else EasyCartColors.LightHeader
+    val iconTint = if (darkMode) EasyCartColors.AccentBlue else EasyCartColors.AccentPurple
+    val titleColor = if (darkMode) EasyCartColors.DarkText else EasyCartColors.LightText
+    val subtitleColor = if (darkMode) Color(0xFF9CA3AF) else Color.Gray
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -868,10 +849,14 @@ fun SectionCardPro(
 }
 
 // ======================================================
-// ✅ SWITCH REUTILIZABLE
+// SWITCH
 // ======================================================
 @Composable
-private fun SettingSwitch(title: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+private fun SettingSwitch(
+    title: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
     Row(
         Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
@@ -881,9 +866,9 @@ private fun SettingSwitch(title: String, checked: Boolean, onCheckedChange: (Boo
     }
 }
 
-// =====================================================================================
-// ✅ PERMISO DE CÁMARA
-// =====================================================================================
+// ======================================================
+// PERMISO DE CÁMARA
+// ======================================================
 @Composable
 fun RequestCameraPermission(onGranted: @Composable () -> Unit) {
     val context = LocalContext.current
@@ -906,9 +891,9 @@ fun RequestCameraPermission(onGranted: @Composable () -> Unit) {
     if (hasPermission) onGranted()
 }
 
-// =====================================================================================
-// ✅ CÁMARA PRO con overlay + línea láser
-// =====================================================================================
+// ======================================================
+// CÁMARA PRO
+// ======================================================
 @Composable
 fun CameraScanner(
     torchEnabled: Boolean,

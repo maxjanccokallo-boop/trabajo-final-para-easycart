@@ -5,6 +5,10 @@ import android.content.pm.PackageManager
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.core.app.ActivityCompat
 import com.example.easycart.bluetooth.BluetoothService
 import com.example.easycart.di.AppModule
@@ -12,8 +16,6 @@ import com.example.easycart.ui.navigation.RootNavGraph
 import com.example.easycart.ui.theme.EasyCartTheme
 import com.example.easycart.viewmodel.AuthViewModel
 import com.example.easycart.viewmodel.MainViewModel
-import androidx.compose.material3.Surface
-import androidx.compose.material3.MaterialTheme
 import androidx.navigation.compose.rememberNavController
 
 class MainActivity : ComponentActivity() {
@@ -36,8 +38,6 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         ensureBluetoothPermissions()
-
-        // Inicializar BluetoothService globalmente
         AppModule.bluetoothService = BluetoothService(applicationContext)
 
         val repo = AppModule.repo
@@ -45,16 +45,21 @@ class MainActivity : ComponentActivity() {
         val mainVm = MainViewModel(repo)
 
         setContent {
-            EasyCartTheme {
-                Surface(color = MaterialTheme.colorScheme.background) {
-                    val navController = rememberNavController()
 
-                    RootNavGraph(
-                        navController = navController,
-                        authViewModel = authVm,
-                        mainViewModel = mainVm
-                    )
-                }
+            // 🔥 Tema Global
+            var darkMode by remember { mutableStateOf(true) }
+
+            EasyCartTheme(darkTheme = darkMode) {
+
+                val navController = rememberNavController()
+
+                RootNavGraph(
+                    navController = navController,
+                    authViewModel = authVm,
+                    mainViewModel = mainVm,
+                    darkMode = darkMode,
+                    onToggleTheme = { darkMode = !darkMode }
+                )
             }
         }
     }

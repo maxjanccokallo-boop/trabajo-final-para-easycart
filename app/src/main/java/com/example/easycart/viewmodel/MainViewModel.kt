@@ -41,6 +41,16 @@ class MainViewModel(
     private val repository: EasyCartRepository
 ) : ViewModel() {
 
+    // ===============================
+    // 🌙 MANEJO DE TEMA GLOBAL
+    // ===============================
+    private val _darkTheme = MutableStateFlow(false)
+    val darkTheme: StateFlow<Boolean> = _darkTheme.asStateFlow()
+
+    fun toggleTheme() {
+        _darkTheme.value = !_darkTheme.value
+    }
+
     private val _uiState = MutableStateFlow(
         MainUiState(user = repository.currentUser())
     )
@@ -72,7 +82,7 @@ class MainViewModel(
             val product = repository.findProductByBarcode(barcode)
 
             if (product != null) {
-                enviarPermiso() 
+                enviarPermiso()
                 addProductToCart(product)
                 activateGreenLED()
                 _uiState.update {

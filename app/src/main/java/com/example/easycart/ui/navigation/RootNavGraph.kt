@@ -17,9 +17,12 @@ import com.example.easycart.ui.screens.home.PaymentScreen
 fun RootNavGraph(
     navController: NavHostController,
     authViewModel: AuthViewModel,
-    mainViewModel: MainViewModel
-) {
+    mainViewModel: MainViewModel,
 
+    // ⭐ AHORA ESTÁN ACEPTADOS
+    darkMode: Boolean,
+    onToggleTheme: () -> Unit
+) {
 
     NavHost(
         navController = navController,
@@ -27,9 +30,7 @@ fun RootNavGraph(
             Screen.Login.route else Screen.Home.route
     ) {
 
-        // -------------------------
-        // LOGIN / REGISTER / PAYMENT SCREENS (Sin cambios)
-        // -------------------------
+        // LOGIN
         composable(Screen.Login.route) {
             LoginScreen(
                 viewModel = authViewModel,
@@ -38,9 +39,13 @@ fun RootNavGraph(
                         popUpTo(Screen.Login.route) { inclusive = true }
                     }
                 },
-                onGoToRegister = { navController.navigate(Screen.Register.route) }
+                onGoToRegister = {
+                    navController.navigate(Screen.Register.route)
+                }
             )
         }
+
+        // REGISTRO
         composable(Screen.Register.route) {
             RegisterScreen(
                 viewModel = authViewModel,
@@ -52,9 +57,13 @@ fun RootNavGraph(
                 onBackToLogin = { navController.popBackStack() }
             )
         }
+
+        // PAGO EFECTIVO
         composable("cash_payment") {
             CashPaymentScreen(navController, mainViewModel)
         }
+
+        // PAGO ÉXITO
         composable("payment_success") {
             PaymentSuccessScreen(
                 onDone = {
@@ -65,23 +74,27 @@ fun RootNavGraph(
                 }
             )
         }
+
+        // PAGO GENERAL
         composable("payment") {
             PaymentScreen(navController, mainViewModel)
         }
 
-        // -------------------------
-        // HOME SCREEN (CONTENEDOR DE TABS)
-        // -------------------------
+        // ⭐⭐⭐ HOME SCREEN CON TEMA GLOBAL ⭐⭐⭐
         composable(Screen.Home.route) {
             HomeScreen(
                 navController = navController,
                 viewModel = mainViewModel,
+
+                // 🔥 Modo claro/oscuro que controlas desde MainActivity
+                darkMode = darkMode,
+                onToggleTheme = onToggleTheme,
+
                 onLogout = {
                     navController.navigate(Screen.Login.route) {
                         popUpTo(Screen.Home.route) { inclusive = true }
                     }
                 }
-                // ⭐ SE ELIMINA EL PARÁMETRO onNavigateToCartTab
             )
         }
     }

@@ -7,9 +7,12 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
+// 💡 Importamos colores desde Color.kt (ya no se vuelven a crear aquí)
+
 private val LightColors = lightColorScheme(
     primary = BluePrimary,
     onPrimary = Color.White,
+
     secondary = PurpleAccent,
     onSecondary = Color.White,
 
