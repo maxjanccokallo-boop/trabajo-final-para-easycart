@@ -110,6 +110,12 @@ dependencies {
     implementation(libs.androidx.credentials.play.services.auth)
     implementation(libs.googleid)
 
+
+    // ===== ANIMATION====
+    // ===== COMPOSE ANIMATIONS =====
+    implementation("androidx.compose.animation:animation:1.7.0")
+    implementation("androidx.compose.animation:animation-core:1.7.0")
+
     // ===== TESTS =====
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

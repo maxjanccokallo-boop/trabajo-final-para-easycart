@@ -7,21 +7,45 @@ import android.os.Handler
 import android.os.Looper
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.camera.core.*
+import androidx.camera.core.Camera
+import androidx.camera.core.CameraSelector
+import androidx.camera.core.ImageAnalysis
+import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
-import androidx.compose.animation.*
-import androidx.compose.animation.core.*
-import androidx.compose.foundation.*
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.ExperimentalAnimationApi
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.EaseInOutSine
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.*
-import androidx.compose.ui.draw.*
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
@@ -46,24 +70,35 @@ import com.google.mlkit.vision.common.InputImage
 import java.text.SimpleDateFormat
 import java.util.*
 import kotlin.math.roundToInt
-import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
+
 
 const val FIXED_BARCODE_LENGTH = 12
 
 // ================================
-// 🎨 ESTILOS
+// 🎨 PALETA LIGHT / DARK
 // ================================
-private val ScanHeaderGradient = Brush.horizontalGradient(
+private val LightHeaderGradient = Brush.horizontalGradient(
     listOf(Color(0xFF4A64F0), Color(0xFF8B5CF6))
 )
-private val ScreenBg = Brush.verticalGradient(
+private val DarkHeaderGradient = Brush.verticalGradient(
+    listOf(Color(0xFF111827), Color(0xFF020617))
+)
+
+private val LightScreenBg = Brush.verticalGradient(
     listOf(Color(0xFFF7F6FB), Color(0xFFF1ECFF))
+)
+private val DarkScreenBg = Brush.verticalGradient(
+    listOf(Color(0xFF020617), Color(0xFF020617))
 )
 
 // ================================
 // ⭐ PANTALLA PRINCIPAL
 // ================================
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalAnimationApi::class)
 @Composable
 fun ScanScreen(
     viewModel: MainViewModel,
@@ -80,10 +115,16 @@ fun ScanScreen(
     var showSettings by rememberSaveable { mutableStateOf(false) }
     val settingsSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
-    // Configs locales (no rompen lógica)
+    // Configs locales
     var soundEnabled by rememberSaveable { mutableStateOf(true) }
     var hapticEnabled by rememberSaveable { mutableStateOf(true) }
     var accept13Digits by rememberSaveable { mutableStateOf(false) }
+
+    // Tema claro / oscuro (empieza en oscuro como la captura)
+    var isDarkMode by rememberSaveable { mutableStateOf(true) }
+
+    // Idioma (solo visual)
+    var currentLanguage by rememberSaveable { mutableStateOf("Español") }
 
     val focusRequester = remember { FocusRequester() }
     val haptic = LocalHapticFeedback.current
@@ -97,6 +138,9 @@ fun ScanScreen(
     // Responsive simple
     val widthDp = LocalConfiguration.current.screenWidthDp
     val horizontalPad = if (widthDp < 400) 12.dp else 16.dp
+
+    // Fondo según tema
+    val screenBg = if (isDarkMode) DarkScreenBg else LightScreenBg
 
     // ======================================================
     // ✅ MÉTRICAS REALES
@@ -118,14 +162,14 @@ fun ScanScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(ScreenBg)
+            .background(screenBg)
             .verticalScroll(rememberScrollState())
             .padding(horizontal = horizontalPad, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
 
         // ======================================================
-        // ✅ HEADER PRO + ⚙️ funcional
+        // ✅ HEADER PRO + ⚙️ + botón tema
         // ======================================================
         AnimatedVisibility(
             visible = appear,
@@ -135,106 +179,25 @@ fun ScanScreen(
                 today = todayScans,
                 total = totalScans,
                 successRate = successRate,
+                isDarkMode = isDarkMode,
+                currentLanguage = currentLanguage,
+                onToggleTheme = { isDarkMode = !isDarkMode },
                 onSettingsClick = { showSettings = true }
             )
         }
 
         // ======================================================
-        // ✅ CARD CONEXIONES (VISUAL)
-        // ======================================================
-        AnimatedVisibility(
-            visible = appear,
-            enter = fadeIn(tween(600)) + slideInVertically(tween(600), initialOffsetY = { it / 2 })
-        ) {
-            ConnectionsCard(
-                usbConnected = null,
-                btConnected = null
-            )
-        }
-
-        // ======================================================
-        // ✅ CARD USB (MISMA LÓGICA)
+        // ✅ 1) ESCÁNER POR CÁMARA (PRIMERO)
         // ======================================================
         AnimatedVisibility(
             visible = appear,
             enter = fadeIn(tween(650)) + slideInVertically(tween(650), initialOffsetY = { it / 2 })
         ) {
             SectionCardPro(
-                icon = Icons.Default.Usb,
-                title = "Escáner USB",
-                subtitle = "Usa tu pistola de escaneo"
-            ) {
-                TextField(
-                    value = scannedText,
-                    onValueChange = { newCode ->
-                        scannedText = newCode
-                        val temp = newCode.trim()
-
-                        val validLen = temp.length == FIXED_BARCODE_LENGTH ||
-                                (accept13Digits && temp.length == 13)
-
-                        if (validLen) {
-                            viewModel.onBarcodeScanned(temp)
-                            scannedText = ""
-                            if (hapticEnabled) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        } else if (newCode.endsWith("\n")) {
-                            val clean = newCode.trim()
-                            if (clean.isNotEmpty()) {
-                                viewModel.onBarcodeScanned(clean)
-                                if (hapticEnabled) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                            }
-                            scannedText = ""
-                        }
-                    },
-                    label = { Text("Escanea aquí...") },
-                    placeholder = { Text("Esperando escaneo...") },
-                    singleLine = true,
-                    leadingIcon = {
-                        Icon(Icons.Default.CenterFocusWeak, contentDescription = null)
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .focusRequester(focusRequester)
-                        .focusable(true),
-                    shape = RoundedCornerShape(14.dp),
-                    colors = TextFieldDefaults.colors(
-                        focusedContainerColor = Color(0xFFF1F0FF),
-                        unfocusedContainerColor = Color(0xFFF1F0FF),
-                        focusedIndicatorColor = Color.Transparent,
-                        unfocusedIndicatorColor = Color.Transparent
-                    )
-                )
-
-                Spacer(Modifier.height(10.dp))
-
-                Button(
-                    onClick = { },
-                    enabled = false,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(54.dp),
-                    shape = RoundedCornerShape(14.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFF7B61FF).copy(alpha = 0.15f),
-                        disabledContainerColor = Color(0xFF7B61FF).copy(alpha = 0.15f)
-                    )
-                ) {
-                    Text("⚡ Escanear con USB", color = Color(0xFF7B61FF), fontWeight = FontWeight.Bold)
-                }
-            }
-        }
-
-        // ======================================================
-        // ✅ CARD CÁMARA (MISMA LÓGICA)
-        // ======================================================
-        AnimatedVisibility(
-            visible = appear,
-            enter = fadeIn(tween(700)) + slideInVertically(tween(700), initialOffsetY = { it / 2 })
-        ) {
-            SectionCardPro(
-                icon = Icons.Default.Wifi,
+                icon = Icons.Default.CameraAlt,
                 title = "Escáner por cámara",
-                subtitle = "Usa la cámara de tu dispositivo"
+                subtitle = "Usa la cámara de tu dispositivo",
+                isDarkMode = isDarkMode
             ) {
 
                 val pulseInf = rememberInfiniteTransition(label = "pulse")
@@ -247,6 +210,8 @@ fun ScanScreen(
                     ),
                     label = "pulseScale"
                 )
+
+                val camButtonColor = if (isDarkMode) Color(0xFF4F46E5) else Color(0xFF1976D2)
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -262,11 +227,11 @@ fun ScanScreen(
                                 scaleY = if (!showCameraScanner) pulseScale else 1f
                             },
                         shape = RoundedCornerShape(16.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1976D2))
+                        colors = ButtonDefaults.buttonColors(containerColor = camButtonColor)
                     ) {
                         Icon(Icons.Default.CenterFocusWeak, contentDescription = null, tint = Color.White)
                         Spacer(Modifier.width(8.dp))
-                        Text("Escanear por cámara", color = Color.White, fontWeight = FontWeight.Bold)
+                        Text("Iniciar escaneo", color = Color.White, fontWeight = FontWeight.Bold)
                     }
 
                     if (torchSupported) {
@@ -275,7 +240,7 @@ fun ScanScreen(
                             modifier = Modifier
                                 .size(56.dp)
                                 .clip(RoundedCornerShape(14.dp))
-                                .background(Color(0xFF111827))
+                                .background(if (isDarkMode) Color(0xFF020617) else Color(0xFF111827))
                         ) {
                             Icon(
                                 imageVector = if (torchEnabled) Icons.Default.FlashOn else Icons.Default.FlashOff,
@@ -325,7 +290,10 @@ fun ScanScreen(
                                 torchEnabled = false
                             },
                             modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(14.dp)
+                            shape = RoundedCornerShape(14.dp),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = if (isDarkMode) Color(0xFFE5E7EB) else Color.Black
+                            )
                         ) {
                             Icon(Icons.Default.Close, contentDescription = null)
                             Spacer(Modifier.width(8.dp))
@@ -337,53 +305,138 @@ fun ScanScreen(
         }
 
         // ======================================================
-        // ✅ RESULTADOS ESCANEO (MISMA LÓGICA)
+        // ✅ 2) ESTADO DE CONEXIONES
         // ======================================================
         AnimatedVisibility(
-            visible = uiState.lastScanned != null || uiState.scanError != null,
-            enter = fadeIn(tween(300)) + slideInVertically(initialOffsetY = { it / 3 }),
-            exit = fadeOut(tween(200))
+            visible = appear,
+            enter = fadeIn(tween(600)) + slideInVertically(tween(600), initialOffsetY = { it / 2 })
+        ) {
+            ConnectionsCard(
+                usbConnected = null,
+                btConnected = null,
+                isDarkMode = isDarkMode
+            )
+        }
+
+        // ======================================================
+        // ✅ 3) ESCÁNER USB
+        // ======================================================
+        AnimatedVisibility(
+            visible = appear,
+            enter = fadeIn(tween(700)) + slideInVertically(tween(700), initialOffsetY = { it / 2 })
         ) {
             SectionCardPro(
-                icon = Icons.Default.Timelapse,
-                title = "Resultado",
-                subtitle = "Último escaneo"
+                icon = Icons.Default.Usb,
+                title = "Escáner USB",
+                subtitle = "Usa tu pistola de escaneo",
+                isDarkMode = isDarkMode
             ) {
-                AnimatedContent(
-                    targetState = uiState.scanError to uiState.lastScanned,
-                    transitionSpec = {
-                        fadeIn(tween(200)) + slideInVertically(tween(250)) togetherWith
-                                fadeOut(tween(150)) + slideOutVertically(tween(200))
+                val textFieldBg = if (isDarkMode) Color(0xFF020617) else Color(0xFFF1F0FF)
+                val textColor = if (isDarkMode) Color.White else Color.Black
+
+                TextField(
+                    value = scannedText,
+                    onValueChange = { newCode ->
+                        scannedText = newCode
+                        val temp = newCode.trim()
+
+                        val validLen = temp.length == FIXED_BARCODE_LENGTH ||
+                                (accept13Digits && temp.length == 13)
+
+                        if (validLen) {
+                            viewModel.onBarcodeScanned(temp)
+                            scannedText = ""
+                            if (hapticEnabled) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        } else if (newCode.endsWith("\n")) {
+                            val clean = newCode.trim()
+                            if (clean.isNotEmpty()) {
+                                viewModel.onBarcodeScanned(clean)
+                                if (hapticEnabled) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            }
+                            scannedText = ""
+                        }
                     },
-                    label = "scanResultAnim"
-                ) { (error, last) ->
-                    if (error == null && last != null) {
-                        SuccessMessage("Producto agregado: $last")
-                    } else {
-                        ErrorMessage(error ?: "Error desconocido")
-                    }
+                    label = {
+                        Text(
+                            "Escanea o ingresa código...",
+                            color = if (isDarkMode) Color(0xFF9CA3AF) else Color.Gray
+                        )
+                    },
+                    placeholder = {
+                        Text(
+                            "Esperando escaneo...",
+                            color = if (isDarkMode) Color(0xFF6B7280) else Color.Gray
+                        )
+                    },
+                    singleLine = true,
+                    leadingIcon = {
+                        Icon(Icons.Default.CenterFocusWeak, contentDescription = null)
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .focusRequester(focusRequester)
+                        .focusable(true),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = textFieldBg,
+                        unfocusedContainerColor = textFieldBg,
+                        focusedIndicatorColor = Color.Transparent,
+                        unfocusedIndicatorColor = Color.Transparent,
+                        focusedTextColor = textColor,
+                        unfocusedTextColor = textColor,
+                        cursorColor = if (isDarkMode) Color(0xFF60A5FA) else Color(0xFF4A64F0)
+                    )
+                )
+
+                Spacer(Modifier.height(10.dp))
+
+                val usbButtonBg =
+                    if (isDarkMode) Color(0xFF020617) else Color(0xFF7B61FF).copy(alpha = 0.15f)
+                val usbTextColor = if (isDarkMode) Color(0xFF818CF8) else Color(0xFF7B61FF)
+
+                Button(
+                    onClick = { /* acción futura */ },
+                    enabled = false,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(54.dp),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = usbButtonBg,
+                        disabledContainerColor = usbButtonBg
+                    )
+                ) {
+                    Text("⚡ Escanear código", color = usbTextColor, fontWeight = FontWeight.Bold)
                 }
             }
         }
 
         // ======================================================
-        // ✅ HISTORIAL DE ESCANEOS (NUEVO)
+        // ✅ 4) HISTORIAL DE ESCANEOS
         // ======================================================
         SectionCardPro(
             icon = Icons.Default.History,
             title = "Historial de escaneos",
-            subtitle = "Últimos códigos leídos"
+            subtitle = "Últimos códigos leídos",
+            isDarkMode = isDarkMode
         ) {
             if (history.isEmpty()) {
-                Text("Aún no hay escaneos.", color = Color.Gray)
+                Text(
+                    "No hay escaneos aún",
+                    color = if (isDarkMode) Color(0xFF9CA3AF) else Color.Gray
+                )
             } else {
                 history.take(15).forEach { entry ->
-                    HistoryRow(entry)
+                    HistoryRow(entry, isDarkMode)
                     Spacer(Modifier.height(8.dp))
                 }
 
                 if (history.size > 15) {
-                    Text("Mostrando 15 de ${history.size}", color = Color.Gray, style = MaterialTheme.typography.bodySmall)
+                    Text(
+                        "Mostrando 15 de ${history.size}",
+                        color = if (isDarkMode) Color(0xFF9CA3AF) else Color.Gray,
+                        style = MaterialTheme.typography.bodySmall
+                    )
                 }
 
                 Spacer(Modifier.height(6.dp))
@@ -391,7 +444,10 @@ fun ScanScreen(
                 OutlinedButton(
                     onClick = { viewModel.clearScanHistory() },
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = if (isDarkMode) Color(0xFFE5E7EB) else Color.Black
+                    )
                 ) {
                     Text("Limpiar historial")
                 }
@@ -399,7 +455,7 @@ fun ScanScreen(
         }
 
         // ======================================================
-        // ✅ LED (MISMA LÓGICA)
+        // ✅ 5) ESTADO LED
         // ======================================================
         val ledColor by animateColorAsState(
             targetValue = when (uiState.ledState) {
@@ -418,17 +474,23 @@ fun ScanScreen(
             SectionCardPro(
                 icon = Icons.Default.Settings,
                 title = "Estado LED",
-                subtitle = "Conexión del carrito"
+                subtitle = "Conexión del carrito",
+                isDarkMode = isDarkMode
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     Box(
-                        Modifier.size(18.dp)
+                        Modifier
+                            .size(18.dp)
                             .background(ledColor, CircleShape)
                     )
-                    Text(uiState.ledState.name, fontWeight = FontWeight.Bold)
+                    Text(
+                        uiState.ledState.name,
+                        fontWeight = FontWeight.Bold,
+                        color = if (isDarkMode) Color.White else Color.Black
+                    )
                 }
             }
         }
@@ -440,7 +502,8 @@ fun ScanScreen(
     if (showSettings) {
         ModalBottomSheet(
             onDismissRequest = { showSettings = false },
-            sheetState = settingsSheetState
+            sheetState = settingsSheetState,
+            containerColor = if (isDarkMode) Color(0xFF020617) else Color.White
         ) {
             Column(
                 Modifier
@@ -448,7 +511,40 @@ fun ScanScreen(
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Text("Configuración de escaneo", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                Text(
+                    "Configuración",
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = if (isDarkMode) Color.White else Color.Black
+                )
+
+                // Idioma
+                Text(
+                    "Idioma de la app",
+                    fontWeight = FontWeight.SemiBold,
+                    color = if (isDarkMode) Color(0xFFE5E7EB) else Color.Black
+                )
+
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilterChip(
+                        selected = currentLanguage == "Español",
+                        onClick = { currentLanguage = "Español" },
+                        label = { Text("Español") }
+                    )
+                    FilterChip(
+                        selected = currentLanguage == "English",
+                        onClick = { currentLanguage = "English" },
+                        label = { Text("English") }
+                    )
+                }
+
+                Divider(Modifier.padding(vertical = 8.dp))
+
+                Text(
+                    "Preferencias de escaneo",
+                    fontWeight = FontWeight.SemiBold,
+                    color = if (isDarkMode) Color(0xFFE5E7EB) else Color.Black
+                )
 
                 SettingSwitch(
                     title = "Sonido al escanear",
@@ -492,37 +588,78 @@ private fun ScanHeaderCard(
     today: Int,
     total: Int,
     successRate: Int,
+    isDarkMode: Boolean,
+    currentLanguage: String,
+    onToggleTheme: () -> Unit,
     onSettingsClick: () -> Unit
 ) {
+    val gradient = if (isDarkMode) DarkHeaderGradient else LightHeaderGradient
+
     Card(
-        modifier = Modifier.fillMaxWidth().shadow(12.dp, RoundedCornerShape(20.dp)),
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(12.dp, RoundedCornerShape(20.dp)),
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = Color.Transparent)
     ) {
         Box(
             modifier = Modifier
-                .background(ScanHeaderGradient)
+                .background(gradient)
                 .padding(18.dp)
         ) {
             Column {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        Text(
-                            "Escanear",
-                            color = Color.White,
-                            fontWeight = FontWeight.Bold,
-                            style = MaterialTheme.typography.titleLarge
-                        )
-                        Text(
-                            "Modo rápido y preciso",
-                            color = Color.White.copy(alpha = 0.9f),
-                            style = MaterialTheme.typography.bodySmall
-                        )
+
+                    // Avatar + nombre + estado
+                    Row(
+                        modifier = Modifier.weight(1f),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(34.dp)
+                                .clip(CircleShape)
+                                .background(Color(0xFF22C55E)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                Icons.Default.Person,
+                                contentDescription = null,
+                                tint = Color.White
+                            )
+                        }
+                        Spacer(Modifier.width(10.dp))
+                        Column {
+                            Text(
+                                "Juan Pérez",
+                                color = Color.White,
+                                fontWeight = FontWeight.SemiBold,
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(
+                                    Modifier
+                                        .size(8.dp)
+                                        .background(Color(0xFF22C55E), CircleShape)
+                                )
+                                Spacer(Modifier.width(6.dp))
+                                Text(
+                                    "Sistema operativo",
+                                    color = Color.White.copy(alpha = 0.9f),
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
+                        }
                     }
 
-                    HeaderIconButton(Icons.Default.Timelapse) { }
+                    // Botón tema claro / oscuro
+                    HeaderIconButton(
+                        icon = if (isDarkMode) Icons.Default.LightMode else Icons.Default.DarkMode,
+                        onClick = onToggleTheme
+                    )
                     Spacer(Modifier.width(8.dp))
-                    HeaderIconButton(Icons.Default.Settings) { onSettingsClick() }
+                    // Botón settings (idioma + opciones)
+                    HeaderIconButton(Icons.Default.Settings, onClick = onSettingsClick)
                 }
 
                 Spacer(Modifier.height(12.dp))
@@ -533,7 +670,7 @@ private fun ScanHeaderCard(
                 ) {
                     MiniStatCard("Hoy", today.toString())
                     MiniStatCard("Total", total.toString())
-                    MiniStatCard("Éxito", "$successRate%")
+                    MiniStatCard("Precisión", "$successRate%")
                 }
             }
         }
@@ -596,12 +733,23 @@ fun MiniStatCard(
 // ✅ HISTORIAL UI
 // ======================================================
 @Composable
-private fun HistoryRow(entry: ScanEntry) {
+private fun HistoryRow(entry: ScanEntry, isDarkMode: Boolean) {
     val dateFmt = remember { SimpleDateFormat("HH:mm:ss", Locale.getDefault()) }
     val time = dateFmt.format(Date(entry.timestamp))
 
-    val bg = if (entry.success) Color(0xFFE8FFF0) else Color(0xFFFFE6E6)
-    val fg = if (entry.success) Color(0xFF2E7D32) else Color(0xFFD32F2F)
+    val bg = if (entry.success) {
+        if (isDarkMode) Color(0xFF052E16) else Color(0xFFE8FFF0)
+    } else {
+        if (isDarkMode) Color(0xFF450A0A) else Color(0xFFFFE6E6)
+    }
+
+    val fg = if (entry.success) {
+        if (isDarkMode) Color(0xFF6EE7B7) else Color(0xFF2E7D32)
+    } else {
+        if (isDarkMode) Color(0xFFFCA5A5) else Color(0xFFD32F2F)
+    }
+
+    val secondary = if (isDarkMode) Color(0xFF9CA3AF) else Color.Gray
 
     Row(
         Modifier
@@ -610,11 +758,26 @@ private fun HistoryRow(entry: ScanEntry) {
             .padding(10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(time, color = fg, fontWeight = FontWeight.Bold, modifier = Modifier.width(70.dp))
+        Text(
+            time,
+            color = fg,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.width(70.dp)
+        )
         Spacer(Modifier.width(8.dp))
         Column(Modifier.weight(1f)) {
-            Text(entry.label, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text("Código: ${entry.barcode}", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+            Text(
+                entry.label,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                color = Color.White
+            )
+            Text(
+                "Código: ${entry.barcode}",
+                style = MaterialTheme.typography.bodySmall,
+                color = secondary
+            )
         }
         Spacer(Modifier.width(6.dp))
         Text(if (entry.success) "OK" else "FAIL", color = fg, fontWeight = FontWeight.Bold)
@@ -627,16 +790,18 @@ private fun HistoryRow(entry: ScanEntry) {
 @Composable
 private fun ConnectionsCard(
     usbConnected: Boolean?,
-    btConnected: Boolean?
+    btConnected: Boolean?,
+    isDarkMode: Boolean
 ) {
     SectionCardPro(
         icon = Icons.Default.Wifi,
         title = "Estado de Conexiones",
-        subtitle = "Arduino / Pistola / Bluetooth"
+        subtitle = "Dispositivos conectados",
+        isDarkMode = isDarkMode
     ) {
-        ConnectionRow(Icons.Default.Usb, "Escáner USB", usbConnected)
+        ConnectionRow(Icons.Default.Usb, "Escáner USB", usbConnected, isDarkMode)
         Spacer(Modifier.height(8.dp))
-        ConnectionRow(Icons.Default.Bluetooth, "Bluetooth", btConnected)
+        ConnectionRow(Icons.Default.Bluetooth, "Bluetooth", btConnected, isDarkMode)
     }
 }
 
@@ -644,13 +809,17 @@ private fun ConnectionsCard(
 private fun ConnectionRow(
     icon: ImageVector,
     label: String,
-    connected: Boolean?
+    connected: Boolean?,
+    isDarkMode: Boolean
 ) {
     val (dotColor, statusText, statusColor) = when (connected) {
-        true -> Triple(Color(0xFF22C55E), "Conectado", Color(0xFF16A34A))
-        false -> Triple(Color(0xFF9CA3AF), "Desconectado", Color(0xFF6B7280))
-        null -> Triple(Color(0xFF9CA3AF), "Sin info", Color(0xFF6B7280))
+        true -> Triple(Color(0xFF22C55E), "Conectado", Color(0xFF4ADE80))
+        false -> Triple(Color(0xFF9CA3AF), "Desconectado", Color(0xFF9CA3AF))
+        null -> Triple(Color(0xFF9CA3AF), "Sin información", Color(0xFF9CA3AF))
     }
+
+    val iconBg = if (isDarkMode) Color(0xFF020617) else Color(0xFFF3F4F6)
+    val labelColor = if (isDarkMode) Color.White else Color.Black
 
     Row(
         Modifier.fillMaxWidth(),
@@ -660,18 +829,22 @@ private fun ConnectionRow(
             Modifier
                 .size(38.dp)
                 .clip(RoundedCornerShape(10.dp))
-                .background(Color(0xFFF3F4F6)),
+                .background(iconBg),
             contentAlignment = Alignment.Center
         ) {
-            Icon(icon, null, tint = Color(0xFF111827))
+            Icon(icon, null, tint = if (isDarkMode) Color(0xFF38BDF8) else Color(0xFF111827))
         }
 
         Spacer(Modifier.width(10.dp))
 
-        Text(label, Modifier.weight(1f), fontWeight = FontWeight.Medium)
+        Text(label, Modifier.weight(1f), fontWeight = FontWeight.Medium, color = labelColor)
 
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(8.dp).background(dotColor, CircleShape))
+            Box(
+                Modifier
+                    .size(8.dp)
+                    .background(dotColor, CircleShape)
+            )
             Spacer(Modifier.width(6.dp))
             Text(statusText, color = statusColor, style = MaterialTheme.typography.bodySmall)
         }
@@ -686,6 +859,7 @@ fun SectionCardPro(
     icon: ImageVector,
     title: String,
     subtitle: String? = null,
+    isDarkMode: Boolean,
     content: @Composable ColumnScope.() -> Unit
 ) {
     val elev by animateDpAsState(
@@ -694,11 +868,17 @@ fun SectionCardPro(
         label = "cardElev"
     )
 
+    val cardColor = if (isDarkMode) Color(0xFF0F172A) else Color.White
+    val iconBg = if (isDarkMode) Color(0xFF020617) else Color(0xFFF3F0FF)
+    val iconTint = if (isDarkMode) Color(0xFF6366F1) else Color(0xFF7B61FF)
+    val titleColor = if (isDarkMode) Color.White else Color.Black
+    val subtitleColor = if (isDarkMode) Color(0xFF9CA3AF) else Color.Gray
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(18.dp),
         elevation = CardDefaults.cardElevation(elev),
-        colors = CardDefaults.cardColors(containerColor = Color.White)
+        colors = CardDefaults.cardColors(containerColor = cardColor)
     ) {
         Column(
             modifier = Modifier.padding(14.dp),
@@ -709,18 +889,22 @@ fun SectionCardPro(
                     modifier = Modifier
                         .size(42.dp)
                         .clip(RoundedCornerShape(12.dp))
-                        .background(Color(0xFFF3F0FF)),
+                        .background(iconBg),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(icon, null, tint = Color(0xFF7B61FF))
+                    Icon(icon, null, tint = iconTint)
                 }
 
                 Spacer(Modifier.width(10.dp))
 
                 Column(Modifier.weight(1f)) {
-                    Text(title, fontWeight = FontWeight.Black)
+                    Text(title, fontWeight = FontWeight.Black, color = titleColor)
                     if (subtitle != null) {
-                        Text(subtitle, style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                        Text(
+                            subtitle,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = subtitleColor
+                        )
                     }
                 }
             }
@@ -728,24 +912,6 @@ fun SectionCardPro(
             content()
         }
     }
-}
-
-@Composable
-fun SuccessMessage(text: String) {
-    Box(
-        Modifier.fillMaxWidth()
-            .background(Color(0xFFD4FCD4), RoundedCornerShape(14.dp))
-            .padding(12.dp)
-    ) { Text("✔ $text", color = Color(0xFF2E7D32)) }
-}
-
-@Composable
-fun ErrorMessage(text: String) {
-    Box(
-        Modifier.fillMaxWidth()
-            .background(Color(0xFFFFE0E0), RoundedCornerShape(14.dp))
-            .padding(12.dp)
-    ) { Text("✖ $text", color = Color(0xFFC62828)) }
 }
 
 // ======================================================
