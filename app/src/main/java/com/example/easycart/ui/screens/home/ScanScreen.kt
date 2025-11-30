@@ -272,7 +272,7 @@ fun ScanScreen(
                                     }
 
                                     viewModel.onBarcodeScanned(code)
-                                    onScanSuccess()
+
                                 }
                             )
                         }
@@ -898,7 +898,7 @@ fun RequestCameraPermission(onGranted: @Composable () -> Unit) {
 fun CameraScanner(
     torchEnabled: Boolean,
     onTorchSupported: (Boolean) -> Unit,
-    onDetected: (String) -> Unit
+    onDetected: (String) -> Unit   // ← ahora ya NO debe navegar
 ) {
     val lifecycleOwner = LocalLifecycleOwner.current
     var isScanning by remember { mutableStateOf(true) }
@@ -964,10 +964,16 @@ fun CameraScanner(
                             scanner.process(img)
                                 .addOnSuccessListener { codes ->
                                     codes.firstOrNull()?.rawValue?.let { code ->
+
                                         if (code.isNotBlank()) {
+
+                                            // 👉 Desactivar lector un momento para evitar dobles lecturas
                                             isScanning = false
+
+                                            // 👉 SOLO enviamos código a la ViewModel
                                             onDetected(code)
 
+                                            // 👉 Reactivar scan luego de una pausa pequeña
                                             Handler(Looper.getMainLooper()).postDelayed({
                                                 isScanning = true
                                             }, 1500)
@@ -986,6 +992,7 @@ fun CameraScanner(
                     val camera = cameraProvider.bindToLifecycle(
                         lifecycleOwner, selector, preview, analyzer
                     )
+
                     cameraRef = camera
                     onTorchSupported(camera.cameraInfo.hasFlashUnit())
                     camera.cameraControl.enableTorch(torchEnabled)
@@ -996,6 +1003,7 @@ fun CameraScanner(
             }
         )
 
+        // Marco del escáner
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -1003,6 +1011,7 @@ fun CameraScanner(
                 .border(2.dp, Color(0xFF22C55E), RoundedCornerShape(14.dp))
         )
 
+        // Línea animada
         Box(
             modifier = Modifier
                 .fillMaxWidth()
