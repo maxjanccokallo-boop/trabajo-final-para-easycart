@@ -36,6 +36,7 @@ import com.example.easycart.data.model.Product
 import com.example.easycart.viewmodel.MainViewModel
 import kotlin.math.roundToInt
 
+
 // -------------------------
 // GRADIENTES LIGHT / DARK
 // -------------------------
@@ -56,6 +57,7 @@ private val CardDark = Color(0xFF0F172A)
 private val TextPrimaryDark = Color.White
 private val TextSecondaryDark = Color(0xFF9CA3AF)
 
+
 // -------------------------
 // ENUM FILTRO
 // -------------------------
@@ -64,6 +66,7 @@ private enum class OfferFilter(val label: String) {
     FLASH("Flash"),
     DAY("Del Día")
 }
+
 
 // -------------------------
 // RESPONSIVE
@@ -77,6 +80,7 @@ private fun getColumnCount(): Int {
         else -> 3
     }
 }
+
 
 // -------------------------
 // PANTALLA COMPLETA
@@ -156,7 +160,10 @@ fun OffersScreen(
 
             item {
                 if (columns == 1) {
-                    Column(verticalArrangement = Arrangement.spacedBy(18.dp)) {
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(18.dp),
+                        modifier = Modifier.padding(horizontal = 16.dp)
+                    ) {
                         filtered.forEach { product ->
                             OfferCardPro(
                                 product = product,
@@ -171,8 +178,8 @@ fun OffersScreen(
                     LazyVerticalGrid(
                         columns = GridCells.Fixed(columns),
                         modifier = Modifier.padding(horizontal = 16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                        horizontalArrangement = Arrangement.spacedBy(14.dp),
+                        verticalArrangement = Arrangement.spacedBy(14.dp)
                     ) {
                         items(filtered) { product ->
                             OfferCardPro(
@@ -190,6 +197,7 @@ fun OffersScreen(
     }
 }
 
+
 // -------------------------
 // HEADER PRO
 // -------------------------
@@ -197,18 +205,23 @@ fun OffersScreen(
 private fun PromoHeaderCard(totalSavings: Double) {
     Card(
         modifier = Modifier
-            .padding(horizontal = 16.dp)
+            .padding(horizontal = 16.dp, vertical = 12.dp)
             .fillMaxWidth()
-            .shadow(14.dp, RoundedCornerShape(22.dp)),
-        shape = RoundedCornerShape(22.dp),
+            .shadow(
+                22.dp,
+                RoundedCornerShape(26.dp),
+                ambientColor = Color.Black.copy(alpha = 0.20f),
+                spotColor = Color.Black.copy(alpha = 0.20f)
+            ),
+        shape = RoundedCornerShape(26.dp),
         colors = CardDefaults.cardColors(containerColor = Color.Transparent)
     ) {
         Box(
             modifier = Modifier
                 .background(PromoGradient)
-                .padding(20.dp)
+                .padding(24.dp)
         ) {
-            Column {
+            Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.LocalOffer, null, tint = Color.White)
@@ -221,46 +234,52 @@ private fun PromoHeaderCard(totalSavings: Double) {
                     )
                 }
 
-                Spacer(Modifier.height(6.dp))
+                Text(
+                    "¡Ahorra hasta 50% hoy!",
+                    color = Color.White.copy(alpha = 0.9f)
+                )
 
-                Text("¡Ahorra hasta 50% hoy!", color = Color.White)
-
-                Spacer(Modifier.height(16.dp))
-
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(Color.White.copy(alpha = 0.2f), RoundedCornerShape(16.dp))
-                        .padding(14.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = Color.White.copy(alpha = 0.18f)
+                    )
                 ) {
-                    Column(Modifier.weight(1f)) {
-                        Text(
-                            "Ahorro total",
-                            color = Color.White.copy(alpha = 0.8f)
-                        )
-                        Text(
-                            "S/ ${"%.2f".format(totalSavings)}",
-                            color = Color.White,
-                            style = MaterialTheme.typography.headlineSmall,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-
-                    Box(
-                        Modifier
-                            .size(48.dp)
-                            .clip(CircleShape)
-                            .background(Color.White),
-                        contentAlignment = Alignment.Center
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(Icons.Default.Percent, null, tint = Color(0xFFFF4F9A))
+
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                "Ahorro total",
+                                color = Color.White.copy(alpha = 0.85f)
+                            )
+                            Text(
+                                "S/ ${"%.2f".format(totalSavings)}",
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold,
+                                style = MaterialTheme.typography.headlineSmall
+                            )
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .size(48.dp)
+                                .clip(CircleShape)
+                                .background(Color.White),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(Icons.Default.Percent, null, tint = Color(0xFFFF4F9A))
+                        }
                     }
                 }
             }
         }
     }
 }
+
 
 // -------------------------
 // CHIPS
@@ -274,42 +293,52 @@ private fun OfferChips(
 
     val cardBg = if (darkMode) CardDark else Color.White
     val textNormal = if (darkMode) TextSecondaryDark else Color.DarkGray
-    val selectedBg = if (darkMode) Color(0xFF7B61FF) else Color(0xFF7B61FF)
+    val selectedBg = Color(0xFF7B61FF)
     val selectedFg = Color.White
 
     Row(
         modifier = Modifier
-            .horizontalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
+            .padding(horizontal = 16.dp)
+            .horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(14.dp)
     ) {
 
         OfferFilter.values().forEach { filter ->
 
+            val isSelected = selected == filter
+
             val bg by animateColorAsState(
-                targetValue = if (selected == filter) selectedBg else cardBg,
-                animationSpec = tween(250),
+                targetValue = if (isSelected) selectedBg else cardBg,
+                animationSpec = tween(200),
                 label = ""
             )
 
             val fg by animateColorAsState(
-                targetValue = if (selected == filter) selectedFg else textNormal,
-                animationSpec = tween(250),
+                targetValue = if (isSelected) selectedFg else textNormal,
+                animationSpec = tween(200),
                 label = ""
             )
 
             Box(
                 modifier = Modifier
-                    .shadow(if (selected == filter) 6.dp else 2.dp, RoundedCornerShape(16.dp))
-                    .background(bg, RoundedCornerShape(16.dp))
+                    .shadow(
+                        if (isSelected) 10.dp else 4.dp,
+                        RoundedCornerShape(18.dp)
+                    )
+                    .background(bg, RoundedCornerShape(18.dp))
                     .clickable { onSelect(filter) }
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                    .padding(horizontal = 20.dp, vertical = 10.dp)
             ) {
-                Text(filter.label, color = fg, fontWeight = FontWeight.Medium)
+                Text(
+                    text = filter.label,
+                    color = fg,
+                    fontWeight = FontWeight.SemiBold
+                )
             }
         }
     }
 }
+
 
 // -------------------------
 // CONTADORES
@@ -348,6 +377,7 @@ private fun OfferCounts(
     }
 }
 
+
 // -------------------------
 // SUPER HOT
 // -------------------------
@@ -357,22 +387,35 @@ private fun SuperHotRow(
     darkMode: Boolean,
     onAddClick: (Product) -> Unit
 ) {
+
     val textPrimary = if (darkMode) TextPrimaryDark else Color.Black
 
     Column(Modifier.padding(start = 16.dp)) {
 
         Row(
-            modifier = Modifier.fillMaxWidth().padding(end = 16.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(end = 16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("🔥 Súper Hot", fontWeight = FontWeight.Bold, color = textPrimary)
+            Text(
+                "🔥 Súper Hot",
+                fontWeight = FontWeight.Bold,
+                color = textPrimary
+            )
+
             Spacer(Modifier.weight(1f))
-            Text("Ver todas >", color = Color(0xFF7B61FF))
+
+            Text(
+                "Ver todas >",
+                color = Color(0xFF7B61FF),
+                fontWeight = FontWeight.SemiBold
+            )
         }
 
-        Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(12.dp))
 
-        LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             items(hotList) { p ->
                 HotCardMini(
                     product = p,
@@ -383,6 +426,7 @@ private fun SuperHotRow(
         }
     }
 }
+
 
 // -------------------------
 // CARD MINI
@@ -395,7 +439,7 @@ private fun HotCardMini(
 ) {
     val base = product.price
     val offer = product.offerPrice ?: base
-    val discount = (((base - offer) / base) * 100).roundToInt().coerceAtLeast(0)
+    val discount = (((base - offer) / base) * 100).roundToInt()
 
     val cardBg = if (darkMode) CardDark else CardLight
     val textPrimary = if (darkMode) TextPrimaryDark else Color.Black
@@ -403,11 +447,17 @@ private fun HotCardMini(
 
     Card(
         modifier = Modifier
-            .width(210.dp)
-            .shadow(8.dp, RoundedCornerShape(18.dp)),
-        shape = RoundedCornerShape(18.dp),
+            .width(220.dp)
+            .shadow(
+                16.dp,
+                RoundedCornerShape(22.dp),
+                ambientColor = Color.Black.copy(alpha = 0.20f),
+                spotColor = Color.Black.copy(alpha = 0.20f)
+            ),
+        shape = RoundedCornerShape(22.dp),
         colors = CardDefaults.cardColors(containerColor = cardBg)
     ) {
+
         Column {
 
             Box {
@@ -416,54 +466,62 @@ private fun HotCardMini(
                         if (product.imageUrl.isNotBlank())
                             rememberAsyncImagePainter(product.imageUrl)
                         else painterResource(R.drawable.offer_placeholder),
-                    contentDescription = null,
-                    modifier = Modifier.fillMaxWidth().height(120.dp),
+                    null,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(130.dp)
+                        .clip(RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp)),
                     contentScale = ContentScale.Crop
                 )
 
                 if (discount >= 30) {
                     Box(
-                        Modifier.padding(8.dp)
-                            .background(Color(0xFFFF4D4D), RoundedCornerShape(10.dp))
-                            .padding(horizontal = 8.dp, vertical = 3.dp)
+                        modifier = Modifier
+                            .padding(10.dp)
+                            .background(Color(0xFFFF4D4D), RoundedCornerShape(12.dp))
+                            .padding(horizontal = 10.dp, vertical = 4.dp)
                     ) {
-                        Text("🔥 HOT", color = Color.White, fontWeight = FontWeight.Bold)
+                        Text(
+                            "🔥 HOT",
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
-                }
-
-                Box(
-                    modifier = Modifier.padding(8.dp)
-                        .size(28.dp)
-                        .clip(CircleShape)
-                        .background(Color.White)
-                        .align(Alignment.TopEnd),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(Icons.Default.FavoriteBorder, null, tint = Color.DarkGray)
                 }
             }
 
-            Column(Modifier.padding(10.dp)) {
-                Text(product.name, maxLines = 1, fontWeight = FontWeight.Bold, color = textPrimary)
-                Spacer(Modifier.height(2.dp))
+            Column(Modifier.padding(14.dp)) {
+
                 Text(
-                    "S/ ${"%.2f".format(offer)}",
+                    product.name,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFFD32F2F)
-                )
-                Text(
-                    "Antes S/ ${"%.2f".format(base)}",
-                    color = textSecondary,
-                    textDecoration = TextDecoration.LineThrough
+                    maxLines = 1,
+                    color = textPrimary
                 )
 
                 Spacer(Modifier.height(6.dp))
 
+                Text(
+                    "S/ ${"%.2f".format(offer)}",
+                    color = Color(0xFFD32F2F),
+                    fontWeight = FontWeight.Bold
+                )
+
+                Text(
+                    "Antes S/ ${"%.2f".format(base)}",
+                    textDecoration = TextDecoration.LineThrough,
+                    color = textSecondary
+                )
+
+                Spacer(Modifier.height(10.dp))
+
                 Button(
                     onClick = { onAdd(product) },
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(10.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF7B61FF))
+                    shape = RoundedCornerShape(16.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFF7B61FF)
+                    )
                 ) {
                     Text("Agregar", color = Color.White)
                 }
@@ -471,6 +529,7 @@ private fun HotCardMini(
         }
     }
 }
+
 
 // -------------------------
 // CARD PRINCIPAL
@@ -481,9 +540,10 @@ private fun OfferCardPro(
     darkMode: Boolean,
     onAddClick: () -> Unit
 ) {
+
     val base = product.price
     val offer = product.offerPrice ?: base
-    val discount = (((base - offer) / base) * 100).roundToInt().coerceAtLeast(0)
+    val discount = (((base - offer) / base) * 100).roundToInt()
 
     val cardBg = if (darkMode) CardDark else CardLight
     val textPrimary = if (darkMode) TextPrimaryDark else Color.Black
@@ -492,39 +552,53 @@ private fun OfferCardPro(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(10.dp, RoundedCornerShape(18.dp)),
-        shape = RoundedCornerShape(18.dp),
+            .shadow(
+                16.dp,
+                RoundedCornerShape(22.dp),
+                ambientColor = Color.Black.copy(alpha = 0.22f),
+                spotColor = Color.Black.copy(alpha = 0.22f)
+            ),
+        shape = RoundedCornerShape(22.dp),
         colors = CardDefaults.cardColors(containerColor = cardBg)
     ) {
+
         Column {
 
-            // Imagen
             Box {
                 Image(
                     painter =
                         if (product.imageUrl.isNotBlank())
                             rememberAsyncImagePainter(product.imageUrl)
                         else painterResource(R.drawable.offer_placeholder),
-                    contentDescription = null,
-                    modifier = Modifier.height(180.dp).fillMaxWidth(),
+                    null,
+                    modifier = Modifier
+                        .height(180.dp)
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp)),
                     contentScale = ContentScale.Crop
                 )
 
                 if (discount >= 30) {
                     Box(
-                        Modifier.padding(10.dp)
-                            .background(Color(0xFFFF4D4D), RoundedCornerShape(10.dp))
+                        modifier = Modifier
+                            .padding(10.dp)
+                            .background(Color(0xFFFF4D4D), RoundedCornerShape(12.dp))
                             .padding(horizontal = 10.dp, vertical = 4.dp)
                     ) {
-                        Text("🔥 HOT", color = Color.White, fontWeight = FontWeight.Bold)
+                        Text(
+                            "🔥 HOT",
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                 }
 
                 if (discount > 0) {
                     Box(
-                        Modifier.padding(10.dp)
+                        modifier = Modifier
+                            .padding(10.dp)
                             .align(Alignment.BottomEnd)
-                            .background(Color(0xFFFFE6E6), RoundedCornerShape(10.dp))
+                            .background(Color(0xFFFFE6E6), RoundedCornerShape(14.dp))
                             .padding(horizontal = 10.dp, vertical = 4.dp)
                     ) {
                         Text(
@@ -536,9 +610,13 @@ private fun OfferCardPro(
                 }
             }
 
-            Column(Modifier.padding(16.dp)) {
+            Column(Modifier.padding(18.dp)) {
 
-                Text(product.name, fontWeight = FontWeight.Bold, color = textPrimary)
+                Text(
+                    product.name,
+                    fontWeight = FontWeight.Bold,
+                    color = textPrimary
+                )
 
                 Spacer(Modifier.height(6.dp))
 
@@ -568,7 +646,7 @@ private fun OfferCardPro(
 
                     Button(
                         onClick = onAddClick,
-                        shape = RoundedCornerShape(14.dp),
+                        shape = RoundedCornerShape(16.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = Color(0xFF7B61FF),
                             contentColor = Color.White
