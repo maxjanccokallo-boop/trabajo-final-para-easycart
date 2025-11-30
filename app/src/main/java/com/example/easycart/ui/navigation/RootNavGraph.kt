@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.navArgument
 import com.example.easycart.viewmodel.AuthViewModel
 import com.example.easycart.viewmodel.MainViewModel
 import com.example.easycart.ui.screens.auth.LoginScreen
@@ -18,8 +19,6 @@ fun RootNavGraph(
     navController: NavHostController,
     authViewModel: AuthViewModel,
     mainViewModel: MainViewModel,
-
-    // ⭐ AHORA ESTÁN ACEPTADOS
     darkMode: Boolean,
     onToggleTheme: () -> Unit
 ) {
@@ -63,15 +62,20 @@ fun RootNavGraph(
             CashPaymentScreen(navController, mainViewModel)
         }
 
-        // PAGO ÉXITO
-        composable("payment_success") {
+        // ⭐⭐⭐ PAGO ÉXITO con pdfPath ⭐⭐⭐
+        composable(
+            route = "payment_success?pdfPath={pdfPath}",
+            arguments = listOf(
+                navArgument("pdfPath") { defaultValue = "" }
+            )
+        ) { entry ->
+
+            val pdfPath = entry.arguments?.getString("pdfPath") ?: ""
+
             PaymentSuccessScreen(
-                onDone = {
-                    navController.navigate(Screen.Home.route) {
-                        popUpTo(Screen.Home.route) { inclusive = true }
-                        launchSingleTop = true
-                    }
-                }
+                pdfPath = pdfPath,
+                navController = navController,
+                viewModel = mainViewModel
             )
         }
 
@@ -80,16 +84,13 @@ fun RootNavGraph(
             PaymentScreen(navController, mainViewModel)
         }
 
-        // ⭐⭐⭐ HOME SCREEN CON TEMA GLOBAL ⭐⭐⭐
+        // HOME SCREEN
         composable(Screen.Home.route) {
             HomeScreen(
                 navController = navController,
                 viewModel = mainViewModel,
-
-                // 🔥 Modo claro/oscuro que controlas desde MainActivity
                 darkMode = darkMode,
                 onToggleTheme = onToggleTheme,
-
                 onLogout = {
                     navController.navigate(Screen.Login.route) {
                         popUpTo(Screen.Home.route) { inclusive = true }

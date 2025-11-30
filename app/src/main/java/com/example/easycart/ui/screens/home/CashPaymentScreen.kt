@@ -22,7 +22,6 @@ fun CashPaymentScreen(
     viewModel: MainViewModel
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val date = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(Date())
 
     Column(
         modifier = Modifier
@@ -30,23 +29,15 @@ fun CashPaymentScreen(
             .padding(20.dp)
     ) {
 
-        // --------------------
-        // TÍTULO
-        // --------------------
         Text(
             "Confirmar Pago en Efectivo",
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold
         )
 
-        Spacer(Modifier.height(14.dp))
-        Text("Fecha: $date", color = Color.Gray)
         Spacer(Modifier.height(20.dp))
 
-
-        // --------------------
-        // BOLETA PREVIA
-        // --------------------
+        // --- BOLETA ---
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(18.dp),
@@ -62,7 +53,7 @@ fun CashPaymentScreen(
                         Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text("${item.productName}  x${item.quantity}")
+                        Text("${item.productName} x${item.quantity}")
                         Text("S/ ${String.format("%.2f", item.totalPrice)}")
                     }
                     Spacer(Modifier.height(6.dp))
@@ -89,19 +80,14 @@ fun CashPaymentScreen(
 
         Spacer(Modifier.height(30.dp))
 
-
-        // --------------------
-        // BOTÓN CONFIRMAR
-        // --------------------
         Button(
             onClick = {
-                // Limpia carrito
-                viewModel.clearCart()
-
-                // Navega a pantalla final
-                navController.navigate("payment_success") {
-                    popUpTo("cash_payment") { inclusive = true }
-                    launchSingleTop = true
+                viewModel.finalizePurchase { ok, purchasedItems ->
+                    if (ok) {
+                        navController.navigate("payment_success") {
+                            popUpTo("cash_payment") { inclusive = true }
+                        }
+                    }
                 }
             },
             modifier = Modifier
@@ -111,10 +97,6 @@ fun CashPaymentScreen(
             colors = ButtonDefaults.buttonColors(
                 containerColor = Color(0xFF4CAF50),
                 contentColor = Color.White
-            ),
-            elevation = ButtonDefaults.buttonElevation(
-                defaultElevation = 6.dp,
-                pressedElevation = 10.dp
             )
         ) {
             Text("Confirmar pago", fontWeight = FontWeight.Bold, fontSize = 18.sp)

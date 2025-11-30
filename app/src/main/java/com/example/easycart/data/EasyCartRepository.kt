@@ -241,15 +241,16 @@ class EasyCartRepository(
     // ===========================================================
     // FINALIZAR COMPRA
     // ===========================================================
-    suspend fun finalizePurchase(uid: String, cart: List<CartItem>): Boolean {
+    suspend fun finalizePurchase(uid: String, purchasedItems: List<CartItem>): Boolean {
 
-        if (cart.isEmpty()) return false
+        if (purchasedItems.isEmpty()) return false
 
         return try {
 
             db.runTransaction { transaction ->
 
-                cart.forEach { item ->
+                // 1. Actualizar stock
+                purchasedItems.forEach { item ->
 
                     val prodRef = db.collection("products").document(item.productId)
                     val snap = transaction.get(prodRef)
@@ -258,13 +259,15 @@ class EasyCartRepository(
                         val stock = snap.getLong("stock")?.toInt() ?: 0
                         val newStock = stock - item.quantity
 
-                        if (newStock < 0)
+                        if (newStock < 0) {
                             throw Exception("Stock insuficiente para ${item.productName}")
+                        }
 
                         transaction.update(prodRef, "stock", newStock)
                     }
                 }
 
+                // 2. Guardar compra
                 val purchaseRef = db.collection("users")
                     .document(uid)
                     .collection("purchases")
@@ -272,13 +275,14 @@ class EasyCartRepository(
 
                 val data = mapOf(
                     "date" to Date(),
-                    "total" to cart.sumOf { it.totalPrice },
-                    "items" to cart.map {
+                    "total" to purchasedItems.sumOf { it.totalPrice },
+                    "items" to purchasedItems.map {
                         mapOf(
                             "productId" to it.productId,
                             "name" to it.productName,
                             "quantity" to it.quantity,
-                            "unitPrice" to it.finalUnitPrice
+                            "unitPrice" to it.finalUnitPrice,
+                            "lineTotal" to it.totalPrice
                         )
                     }
                 )
@@ -287,15 +291,13 @@ class EasyCartRepository(
                 null
             }.await()
 
-            clearCart(uid)
             true
 
         } catch (e: Exception) {
-            println("🔥 Error finalizePurchase: ${e.message}")
+            println("🔥 Error finalizePurchase FIXED: ${e.message}")
             false
         }
     }
-
 
     // ===========================================================
     // HISTORIAL

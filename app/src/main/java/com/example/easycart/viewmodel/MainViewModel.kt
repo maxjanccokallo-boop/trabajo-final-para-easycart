@@ -154,14 +154,23 @@ class MainViewModel(
         }
     }
 
-    fun finalizePurchase(onResult: (Boolean) -> Unit) {
+    fun finalizePurchase(onResult: (Boolean, List<CartItem>) -> Unit) {
         val uid = uiState.value.user?.uid ?: return
-        val cartNow = uiState.value.cart
+
+        // COPIA los productos ANTES de limpiar el carrito
+        val purchasedItems = uiState.value.cart.map { it.copy() }
+
         viewModelScope.launch {
-            val ok = repository.finalizePurchase(uid, cartNow)
-            onResult(ok)
+            val ok = repository.finalizePurchase(uid, purchasedItems)
+
+            // Ahora SI devolvemos los items correctos
+            onResult(ok, purchasedItems)
+
+            // Y recién después limpiamos el carrito
+            if (ok) clearCart()
         }
     }
+
 
     fun loadPurchases() {
         val uid = repository.currentUser()?.uid ?: return

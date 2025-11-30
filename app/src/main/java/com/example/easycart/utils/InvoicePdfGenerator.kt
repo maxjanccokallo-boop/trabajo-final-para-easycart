@@ -18,84 +18,73 @@ object InvoicePdfGenerator {
         items: List<CartItem>,
         total: Double
     ): File? {
+
         if (items.isEmpty()) return null
 
         val document = PdfDocument()
-        val pageInfo = PdfDocument.PageInfo.Builder(595, 842, 1).create() // A4 aprox
+        val pageInfo = PdfDocument.PageInfo.Builder(595, 842, 1).create()
         val page = document.startPage(pageInfo)
         val canvas: Canvas = page.canvas
 
         val titlePaint = Paint().apply {
             isAntiAlias = true
-            textSize = 20f
+            textSize = 22f
             isFakeBoldText = true
         }
 
         val textPaint = Paint().apply {
             isAntiAlias = true
-            textSize = 12f
+            textSize = 13f
         }
 
         val dateFormat = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
-        val nowStr = dateFormat.format(Date())
+        val now = dateFormat.format(Date())
 
         var y = 60f
 
-        // Encabezado
+        // ENCABEZADO -------------------------
         canvas.drawText("Boleta de Venta - EasyCart", 40f, y, titlePaint)
         y += 25f
-        canvas.drawText("Fecha: $nowStr", 40f, y, textPaint)
-        y += 20f
-        canvas.drawText("----------------------------------------", 40f, y, textPaint)
+
+        canvas.drawText("Fecha: $now", 40f, y, textPaint)
         y += 20f
 
-        // Columnas
+        canvas.drawText("---------------------------------------------", 40f, y, textPaint)
+        y += 20f
+
+        // COLUMNAS -------------------------
         canvas.drawText("Producto", 40f, y, textPaint)
-        canvas.drawText("Cant.", 280f, y, textPaint)
-        canvas.drawText("P. Unit", 340f, y, textPaint)
+        canvas.drawText("Cant.", 250f, y, textPaint)
+        canvas.drawText("P. Unit", 320f, y, textPaint)
         canvas.drawText("Total", 430f, y, textPaint)
         y += 15f
-        canvas.drawText("----------------------------------------", 40f, y, textPaint)
+
+        canvas.drawText("---------------------------------------------", 40f, y, textPaint)
         y += 20f
 
-        // Items
+        // ITEMS ----------------------------
         items.forEach { item ->
-            if (y > 780f) return@forEach  // súper simple: no paginar, solo 1 página
+            if (y > 750f) return@forEach
 
-            val lineTotal = item.totalPrice
             canvas.drawText(item.productName, 40f, y, textPaint)
-            canvas.drawText(item.quantity.toString(), 280f, y, textPaint)
-            canvas.drawText(
-                "S/ %.2f".format(item.finalUnitPrice),
-                340f,
-                y,
-                textPaint
-            )
-            canvas.drawText(
-                "S/ %.2f".format(lineTotal),
-                430f,
-                y,
-                textPaint
-            )
+            canvas.drawText(item.quantity.toString(), 250f, y, textPaint)
+            canvas.drawText("S/ %.2f".format(item.finalUnitPrice), 320f, y, textPaint)
+            canvas.drawText("S/ %.2f".format(item.totalPrice), 430f, y, textPaint)
+
             y += 18f
         }
 
         y += 10f
-        canvas.drawText("----------------------------------------", 40f, y, textPaint)
+        canvas.drawText("---------------------------------------------", 40f, y, textPaint)
         y += 25f
 
-        // Total final
-        titlePaint.textSize = 16f
-        canvas.drawText(
-            "TOTAL: S/ %.2f".format(total),
-            40f,
-            y,
-            titlePaint
-        )
+        // TOTAL ----------------------------
+        titlePaint.textSize = 18f
+        canvas.drawText("TOTAL: S/ %.2f".format(total), 40f, y, titlePaint)
 
         document.finishPage(page)
 
-        // Carpeta de descargas privada de la app
+        // GUARDAR PDF ------------------------
         val dir = context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)
             ?: context.filesDir
 

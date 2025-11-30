@@ -22,6 +22,7 @@ import androidx.navigation.NavController
 import com.example.easycart.viewmodel.MainViewModel
 import androidx.compose.foundation.BorderStroke
 import com.example.easycart.utils.QrGenerator
+import com.example.easycart.utils.InvoicePdfGenerator
 
 private val PaymentBg = Brush.verticalGradient(
     listOf(Color(0xFFF7F6FB), Color(0xFFF1ECFF))
@@ -38,6 +39,8 @@ fun PaymentScreen(
     var selected by remember { mutableStateOf("yape") }
     var showVisaForm by remember { mutableStateOf(false) }
 
+    var lastPdfPath by remember { mutableStateOf<String?>(null) }
+
     Box(
         Modifier
             .fillMaxSize()
@@ -47,9 +50,6 @@ fun PaymentScreen(
 
         Column(Modifier.fillMaxSize()) {
 
-            // ---------------------------
-            // TÍTULO
-            // ---------------------------
             Text(
                 "Método de Pago",
                 style = MaterialTheme.typography.titleLarge,
@@ -58,9 +58,6 @@ fun PaymentScreen(
 
             Spacer(Modifier.height(12.dp))
 
-            // ---------------------------
-            // OPCIÓN YAPE
-            // ---------------------------
             PaymentOptionCard(
                 title = "Pagar con Yape (QR)",
                 subtitle = "Escanea el QR desde tu app",
@@ -74,9 +71,6 @@ fun PaymentScreen(
 
             Spacer(Modifier.height(10.dp))
 
-            // ---------------------------
-            // OPCIÓN VISA
-            // ---------------------------
             PaymentOptionCard(
                 title = "Pagar con Visa",
                 subtitle = "Tarjeta débito o crédito",
@@ -90,28 +84,34 @@ fun PaymentScreen(
 
             Spacer(Modifier.height(20.dp))
 
-            // ---------------------------
-            // QR YAPE
-            // ---------------------------
             if (selected == "yape") {
                 QRSection(amount = uiState.total)
             }
 
-            // ---------------------------
-            // FORMULARIO VISA
-            // ---------------------------
             if (selected == "visa" && showVisaForm) {
                 VisaFormSection { showVisaForm = false }
             }
 
             Spacer(Modifier.height(35.dp))
 
-            // ---------------------------
-            // CONFIRMAR PAGO
-            // ---------------------------
+            // ⭐ BOTÓN FINAL DE PAGO
             Button(
                 onClick = {
-                    navController.navigate("payment_success")
+                    viewModel.finalizePurchase { ok, purchasedItems ->
+
+                        if (ok) {
+
+                            val pdf = InvoicePdfGenerator.generateInvoicePdf(
+                                context = context,
+                                items = purchasedItems,
+                                total = purchasedItems.sumOf { it.totalPrice }
+                            )
+
+                            lastPdfPath = pdf?.absolutePath ?: ""
+
+                            navController.navigate("payment_success?pdf=$lastPdfPath")
+                        }
+                    }
                 },
                 modifier = Modifier
                     .fillMaxWidth()
@@ -124,9 +124,6 @@ fun PaymentScreen(
     }
 }
 
-// =====================================================================
-// ⭐ FORMULARIO TARJETA VISA
-// =====================================================================
 @Composable
 fun VisaFormSection(onSaved: () -> Unit) {
     var number by remember { mutableStateOf("") }
@@ -172,9 +169,6 @@ fun VisaFormSection(onSaved: () -> Unit) {
     }
 }
 
-// =====================================================================
-// ⭐ QR YAPE
-// =====================================================================
 @Composable
 fun QRSection(amount: Double) {
     val url = "https://yape.com.pe/pay?amount=${"%.2f".format(amount)}&ref=EASYCART123"
@@ -197,9 +191,6 @@ fun QRSection(amount: Double) {
     }
 }
 
-// =====================================================================
-// ⭐ TARJETA DE OPCIÓN DE PAGO
-// =====================================================================
 @Composable
 private fun PaymentOptionCard(
     title: String,
